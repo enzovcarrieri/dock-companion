@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://enzovcarrieri.github.io/dock-companion/">
+<meta property="og:title" content="Dock Companion">
+<meta property="og:description" content="Make a tiny pixel friend (you, your pet, anyone) and let it live on your Mac's Dock. Free.">
+<meta property="og:image" content="https://enzovcarrieri.github.io/dock-companion/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dock Companion</title>
+<meta name="description" content="Make a pixel art character (you, your pet, anyone) and let it live on your Mac's Dock. Free.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Pixelify+Sans:wght@500;600&display=swap">
+<style>
+/* Layout: a single-screen tool. The scene (a little Dock with the character walking on it) fills the left,
+   a dark floating panel holds every option on the right, and a pill toolbar floats at the bottom.
+   The UI stays monochrome; color comes only from the characters and the Dock icons. */
+:root {
+  --page: #ffffff;
+  --ink: #0b0b0c;
+  --muted: #7a7a80;
+  --hair: #ececee;
+  --panel: #131314;
+  --panel-ink: #f4f4f5;
+  --panel-muted: #9d9da3;
+  --panel-track: #262628;
+  --panel-hover: #333336;
+  --panel-line: rgba(255, 255, 255, 0.08);
+  --pill: #f2f2f3;
+  --pill-ink: #131314;
+  --dock: rgba(246, 246, 248, 0.9);
+  --dock-line: #e4e4e8;
+  --shadow: rgba(10, 10, 12, 0.14);
+  --code: #131314;
+  --code-ink: #f4f4f5;
+  --font: "Geist", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --pixel: "Pixelify Sans", ui-monospace, monospace;
+  --r-panel: 26px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0b0b0c; --ink: #f4f4f5; --muted: #8a8a90; --hair: #1d1d20;
+    --panel: #18181a; --panel-ink: #f4f4f5; --panel-muted: #9d9da3; --panel-track: #2a2a2d; --panel-hover: #36363a; --panel-line: rgba(255, 255, 255, 0.08);
+    --pill: #f2f2f3; --pill-ink: #131314; --dock: rgba(30, 30, 33, 0.92); --dock-line: #2c2c30; --shadow: rgba(0, 0, 0, 0.5);
+    --code: #1d1d20; --code-ink: #f4f4f5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0b0b0c; --ink: #f4f4f5; --muted: #8a8a90; --hair: #1d1d20;
+  --panel: #18181a; --panel-ink: #f4f4f5; --panel-muted: #9d9da3; --panel-track: #2a2a2d; --panel-hover: #36363a; --panel-line: rgba(255, 255, 255, 0.08);
+  --pill: #f2f2f3; --pill-ink: #131314; --dock: rgba(30, 30, 33, 0.92); --dock-line: #2c2c30; --shadow: rgba(0, 0, 0, 0.5);
+  --code: #1d1d20; --code-ink: #f4f4f5;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid #4c8dff; outline-offset: 2px; }
+canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+.app { position: fixed; inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0; display: grid; grid-template-columns: minmax(0, 1fr) 384px; }
+
+/* ---------- scene ---------- */
+.scene { position: relative; min-width: 0; display: grid; place-items: center; overflow: hidden; }
+.wordmark { position: absolute; top: 18px; left: 20px; font-size: 15px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.wordmark b { font-weight: 700; }
+.wordmark canvas { width: 18px; height: 18px; }
+.toplinks { position: absolute; top: 13px; right: 14px; display: flex; gap: 2px; }
+.link { border: 0; background: transparent; padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.link:hover { color: var(--ink); background: var(--hair); }
+.made { position: absolute; left: 20px; bottom: 18px; margin: 0; font-size: 12px; color: var(--muted); }
+.made button { border: 0; background: none; padding: 0; text-decoration: underline; text-underline-offset: 2px; color: var(--ink); font-size: 12px; }
+
+.stagewrap { position: relative; display: grid; justify-items: center; gap: 26px; width: min(560px, calc(100% - 32px)); padding-top: 120px; }
+.hint { font-size: 13px; color: var(--muted); text-align: center; margin: 0; max-width: 34ch; text-wrap: balance; }
+.mini-dock { position: relative; display: flex; gap: 10px; padding: 10px 12px; background: var(--dock); border: 1px solid var(--dock-line); border-radius: 24px; box-shadow: 0 14px 40px -18px var(--shadow), 0 1px 2px var(--shadow); max-width: 100%; }
+.mini-dock .sep { width: 1px; margin: 8px 2px; background: var(--dock-line); }
+.app-icon { position: relative; width: 56px; height: 56px; border: 0; padding: 0; border-radius: 14px; display: grid; place-items: center; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.1); transition: transform .15s; }
+.app-icon:hover { transform: translateY(-3px); }
+.app-icon canvas { width: 30px; height: 30px; }
+.app-icon.bounce { animation: bounce .55s ease-out 2; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-20px); } 65% { transform: translateY(0); } 80% { transform: translateY(-6px); } }
+.i-files { background: linear-gradient(#7fc8ff, #3b8cf0); }
+.i-notes { background: linear-gradient(#fff3b0, #ffd43b); }
+.i-music { background: linear-gradient(#ff8fa3, #f0435e); }
+.i-photos { background: linear-gradient(#fbfbfd, #e3e3ea); }
+.i-mail { background: linear-gradient(#8fd6ff, #2f9bff); }
+.i-trash { background: linear-gradient(#f2f2f4, #d4d4db); }
+.walker { position: absolute; left: 0; right: 0; bottom: calc(100% - 3px); height: 170px; pointer-events: none; }
+.walker canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pet-hit { position: absolute; pointer-events: auto; border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 8px; }
+.nametag { position: absolute; transform: translateX(-50%); font: 600 13px/1 var(--pixel); background: var(--panel); color: var(--panel-ink); padding: 4px 9px 5px; border-radius: 999px; white-space: nowrap; pointer-events: none; }
+.nametag:empty { display: none; }
+
+/* ---------- bottom toolbar ---------- */
+.toolbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; background: var(--panel); color: var(--panel-ink); border-radius: 999px; padding: 4px; box-shadow: 0 8px 24px -10px var(--shadow); z-index: 5; }
+.toolbar > div { position: relative; }
+.toolbar .tbtn { border: 0; background: transparent; padding: 8px 12px 8px 14px; border-radius: 999px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.toolbar .tbtn:hover, .toolbar .tbtn[aria-expanded="true"] { background: var(--panel-track); }
+.toolbar .div { width: 1px; height: 18px; background: var(--panel-line); }
+.caret { width: 12px; height: 12px; }
+.pop { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: var(--panel); color: var(--panel-ink); border-radius: 20px; padding: 8px; box-shadow: 0 18px 40px -12px var(--shadow); }
+.pop[hidden] { display: none; }
+.preset-grid { display: grid; grid-template-columns: repeat(5, 76px); gap: 6px; }
+.preset { border: 0; background: var(--panel-track); border-radius: 14px; padding: 8px 4px 7px; display: grid; justify-items: center; gap: 2px; font-size: 12px; font-weight: 500; }
+.preset:hover { background: var(--panel-hover); }
+.preset canvas { width: 48px; height: 48px; }
+.action-list { display: grid; gap: 2px; min-width: 190px; }
+.action-list button { border: 0; background: transparent; text-align: left; padding: 8px 12px; border-radius: 12px; font-weight: 500; }
+.action-list button:hover { background: var(--panel-track); }
+
+/* ---------- panel ---------- */
+.panel { margin: 12px 12px 12px 0; background: var(--panel); color: var(--panel-ink); border-radius: var(--r-panel); display: flex; flex-direction: column; min-height: 0; }
+.panel-top { display: flex; align-items: center; gap: 8px; padding: 18px 18px 16px; }
+.pill { border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 500; white-space: nowrap; }
+.pill.light { background: var(--pill); color: var(--pill-ink); }
+.pill.light:hover { background: #ffffff; }
+.pill.dark { background: var(--panel-track); color: var(--panel-ink); }
+.pill.dark:hover { background: var(--panel-hover); }
+.round { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--panel-track); color: var(--panel-ink); display: grid; place-items: center; flex: none; }
+.round:hover { background: var(--panel-hover); }
+.round svg { width: 16px; height: 16px; }
+.split { margin-left: auto; display: flex; position: relative; }
+.split > .pill:first-child { border-radius: 999px 0 0 999px; padding-right: 12px; }
+.split > .pill:nth-child(2) { border-radius: 0 999px 999px 0; padding: 8px 11px 8px 10px; border-left: 1px solid var(--panel-line); display: grid; place-items: center; }
+.menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; background: #232325; border-radius: 16px; padding: 6px; min-width: 230px; box-shadow: 0 16px 40px -10px rgba(0,0,0,.6); display: grid; }
+.menu[hidden] { display: none; }
+.menu button { border: 0; background: transparent; text-align: left; padding: 9px 12px; border-radius: 10px; font-weight: 500; }
+.menu button:hover:not([disabled]) { background: var(--panel-hover); }
+.menu button[disabled] { color: var(--panel-muted); cursor: default; }
+.menu a { display: block; padding: 9px 12px; border-radius: 10px; font-weight: 500; text-decoration: none; }
+.menu a:hover { background: var(--panel-hover); }
+.menu small { display: block; color: var(--panel-muted); font-weight: 400; font-size: 12px; }
+
+.scroll { overflow-y: auto; flex: 1; min-height: 0; border-radius: 0 0 var(--r-panel) var(--r-panel); scrollbar-width: thin; scrollbar-color: #3a3a3d transparent; }
+.sec { border-top: 1px solid var(--panel-line); padding: 18px; display: grid; gap: 18px; }
+.sec h3 { margin: 0; text-align: center; font-size: 14px; font-weight: 600; }
+.opt { display: grid; gap: 10px; }
+.opt-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--panel-muted); }
+.opt-head .val { color: var(--panel-ink); }
+.seg { display: flex; background: var(--panel-track); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 999px; padding: 7px 8px; font-size: 13px; font-weight: 500; color: var(--panel-muted); display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.seg button:hover { color: var(--panel-ink); }
+.seg button[aria-pressed="true"] { background: var(--pill); color: var(--pill-ink); }
+.seg button canvas { width: 24px; height: 24px; margin: -5px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { border: 0; background: var(--panel-track); color: var(--panel-muted); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.chips button:hover { color: var(--panel-ink); }
+.chips button[aria-pressed="true"] { background: var(--pill); color: var(--pill-ink); }
+.swatches { display: flex; flex-wrap: wrap; gap: 9px; }
+.sw { width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--pill); }
+.sw.none { background-color: var(--panel-track); background-image: linear-gradient(135deg, transparent 46%, #ff5a4f 46% 54%, transparent 54%); }
+.text { width: 100%; background: var(--panel-track); border: 0; border-radius: 999px; padding: 9px 14px; font-weight: 500; color: var(--panel-ink); }
+.text::placeholder { color: var(--panel-muted); }
+.text:focus { outline: none; box-shadow: 0 0 0 1px var(--panel-muted); }
+
+/* ---------- sheets ---------- */
+.veil { position: fixed; inset: 0; background: rgba(10, 10, 12, 0.38); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 50; display: grid; place-items: center; padding-inline: 16px; padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)); }
+.veil[hidden] { display: none; }
+.sheet { position: relative; width: min(780px, 100%); max-height: 100%; overflow-y: auto; background: var(--page); color: var(--ink); border-radius: var(--r-panel); box-shadow: 0 30px 80px -20px rgba(0,0,0,.45); padding: 34px 34px 30px; }
+.sheet .close { position: absolute; top: 16px; right: 16px; background: var(--hair); color: var(--ink); }
+.sheet .close:hover { background: var(--dock-line); }
+.sheet h2 { margin: 0 0 6px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; padding-right: 40px; }
+.sheet .lede { margin: 0 0 22px; color: var(--muted); max-width: 56ch; }
+.sheet h4 { margin: 28px 0 12px; font-size: 14px; font-weight: 600; }
+.dl { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--hair); border-radius: 18px; }
+.dl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.dl-q { font-weight: 600; min-width: 11rem; }
+.dl .pill { text-decoration: none; background: var(--hair); color: var(--ink); }
+.dl .pill.ink { background: var(--ink); color: var(--page); }
+.dl .pill[aria-disabled="true"] { opacity: .45; cursor: not-allowed; pointer-events: none; }
+.pill.ink { background: var(--ink); color: var(--page); }
+.dl small { color: var(--muted); font-size: 12px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; }
+.steps li::before { content: counter(s); width: 26px; height: 26px; border-radius: 50%; background: var(--hair); font: 600 12px/26px var(--mono); text-align: center; }
+.steps b { display: block; font-weight: 600; }
+.steps span { color: var(--muted); }
+.k { font-family: var(--mono); font-size: 12px; background: var(--hair); color: var(--ink); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.note { margin-top: 16px; padding: 16px; border-radius: 18px; background: var(--hair); display: grid; gap: 10px; }
+.note p { margin: 0; color: var(--muted); }
+.note b { color: var(--ink); }
+.note .k { background: var(--page); }
+.code { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.code code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 12px/1.4 var(--mono); background: var(--code); color: var(--code-ink); padding: 10px 14px; border-radius: 999px; }
+.code .pill { background: var(--ink); color: var(--page); padding: 8px 14px; }
+.faq details { border-top: 1px solid var(--hair); }
+.faq details:last-child { border-bottom: 1px solid var(--hair); }
+.faq summary { list-style: none; cursor: pointer; padding: 13px 0; font-weight: 500; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--muted); }
+.faq details[open] summary::after { content: "–"; }
+.faq p { margin: 0 0 16px; color: var(--muted); max-width: 62ch; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.about { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 30px; align-items: start; }
+.portrait { position: relative; aspect-ratio: 1; border-radius: 22px; background: var(--hair); overflow: hidden; max-width: 100%; }
+.portrait canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.about .role { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+.about p { margin: 0 0 12px; max-width: 58ch; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.links .pill { text-decoration: none; background: var(--hair); color: var(--ink); }
+.links .pill.ink { background: var(--ink); color: var(--page); }
+.mail { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.mail span { font-family: var(--mono); color: var(--ink); user-select: all; }
+.mail .pill { padding: 5px 12px; font-size: 12px; background: var(--hair); color: var(--ink); }
+.credit { margin-top: 22px; font-size: 12px; color: var(--muted); }
+
+.toast { position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px); background: var(--panel); color: var(--panel-ink); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; z-index: 60; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 900px) {
+  .app { position: static; display: block; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .scene { height: max(500px, 66vh); }
+  .panel { margin: 0 12px 12px; }
+  .scroll { overflow: visible; }
+  .cols, .about { grid-template-columns: minmax(0, 1fr); }
+  .portrait { max-width: 220px; }
+  .sheet { padding: 28px 20px 24px; }
+}
+@media (max-width: 520px) {
+  .app-icon { width: 40px; height: 40px; border-radius: 11px; }
+  .app-icon canvas { width: 22px; height: 22px; }
+  .mini-dock { gap: 6px; padding: 8px 9px; border-radius: 18px; }
+  .preset-grid { grid-template-columns: repeat(3, 76px); }
+  .made { display: none; }
+  .toplinks .link { padding: 6px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .app-icon, .toast { transition: none; } .app-icon.bounce { animation: none; } }
+</style>
+
+<div class="app">
+  <main class="scene">
+    <a class="wordmark" href="#"><canvas class="px" id="logo" width="16" height="16" aria-hidden="true"></canvas><span>dock<b>companion</b></span></a>
+    <nav class="toplinks" aria-label="Pages">
+      <a class="link" href="#install">How to install</a>
+      <a class="link" href="#about">About</a>
+    </nav>
+
+    <div class="stagewrap">
+      <div class="mini-dock" id="dock" aria-label="Dock preview">
+        <div class="walker" id="walker"><canvas class="px" id="walker-canvas"></canvas><span class="nametag" id="nametag"></span><button class="pet-hit" id="pet-hit" type="button" aria-label="Pet your character"></button></div>
+        <button class="app-icon i-files" type="button" data-icon="folder" aria-label="Open Files"></button>
+        <button class="app-icon i-notes" type="button" data-icon="notes" aria-label="Open Notes"></button>
+        <button class="app-icon i-music" type="button" data-icon="music" aria-label="Open Music"></button>
+        <button class="app-icon i-mail" type="button" data-icon="mail" aria-label="Open Mail"></button>
+        <button class="app-icon i-photos" type="button" data-icon="camera" aria-label="Open Photos"></button>
+        <span class="sep" aria-hidden="true"></span>
+        <button class="app-icon i-trash" type="button" data-icon="trash" aria-label="Open Trash"></button>
+      </div>
+      <p class="hint">A tiny pixel friend that lives on your Mac's Dock. Click an app and watch it celebrate.</p>
+    </div>
+
+    <p class="made">made by <button type="button" data-open="about">Enzo</button></p>
+
+    <div class="toolbar">
+      <div>
+        <button class="tbtn" type="button" aria-expanded="false" aria-controls="pop-presets" data-pop="pop-presets">Presets <svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 7.5 6 4.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="pop" id="pop-presets" hidden><div class="preset-grid" id="presets"></div></div>
+      </div>
+      <span class="div" aria-hidden="true"></span>
+      <div>
+        <button class="tbtn" type="button" aria-expanded="false" aria-controls="pop-actions" data-pop="pop-actions">Actions <svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 7.5 6 4.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="pop" id="pop-actions" hidden><div class="action-list" id="actions"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel" aria-label="Character options">
+    <div class="panel-top">
+      <button class="pill light" id="randomize" type="button">Surprise me</button>
+      <button class="round" id="reset" type="button" aria-label="Start over" title="Start over"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="split">
+        <button class="pill dark" id="install" type="button">Install on Mac</button>
+        <button class="pill dark" id="more" type="button" aria-label="More options" aria-expanded="false" aria-controls="menu"><svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="menu" id="menu" hidden>
+          <a href="DockCompanion.zip" download>Download for Mac<small>Free · macOS 14 or later</small></a>
+          <button type="button" data-open="install">Installation guide</button>
+          <button type="button" id="copy-code">Copy character code</button>
+        </div>
+      </div>
+    </div>
+    <div class="scroll">
+      <section class="sec">
+        <h3>Character</h3>
+        <div class="seg" id="species" role="group" aria-label="Character type"></div>
+        <div class="opt">
+          <div class="opt-head"><label for="name">Name</label><span class="val" id="name-count"></span></div>
+          <input class="text" id="name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Give it a name">
+        </div>
+      </section>
+      <div id="sections"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Install -->
+<div class="veil" id="sheet-install" hidden>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="install-title">
+    <button class="round close" type="button" data-close aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <h2 id="install-title">Install Dock Companion</h2>
+    <p class="lede">It takes a minute. Your Mac asks for one confirmation the first time, because the app comes straight from this site instead of the App Store.</p>
+    <div class="dl">
+      <div class="dl-row"><span class="dl-q">Already have the app?</span><a class="pill ink" id="send" href="#">Send it to my Dock</a></div>
+      <div class="dl-row"><span class="dl-q">New here?</span><a class="pill" id="download" href="DockCompanion.zip" download>Download for Mac</a><small id="download-note">Free · macOS 14 or later · Apple Silicon and Intel · under 1 MB</small></div>
+    </div>
+    <div class="cols">
+      <div>
+        <h4>Steps</h4>
+        <ol class="steps">
+          <li><div><b>Download and unzip</b><span>Double-click <span class="k">DockCompanion.zip</span>.</span></div></li>
+          <li><div><b>Move it to Applications</b><span>Drag Dock Companion into your Applications folder.</span></div></li>
+          <li><div><b>Open it once</b><span>macOS says it can't verify the developer. That's expected. Click <span class="k">Done</span>.</span></div></li>
+          <li><div><b>Allow it</b><span>Open <span class="k">System Settings</span> → <span class="k">Privacy &amp; Security</span>, scroll down and click <span class="k">Open Anyway</span>.</span></div></li>
+          <li><div><b>Send your character</b><span>Come back here and click <span class="k">Send it to my Dock</span>. Your character jumps right onto your Dock.</span></div></li>
+        </ol>
+        <div class="note">
+          <p><b>No "Open Anyway" button?</b> Files received through messaging apps like WhatsApp get an extra lock from macOS. Open <span class="k">Terminal</span> (Applications → Utilities), paste this and press Return:</p>
+          <div class="code"><code id="cmd">xattr -dr com.apple.quarantine "/Applications/Dock Companion.app"</code><button class="pill" type="button" data-copy="cmd">Copy</button></div>
+          <p>It only removes the "downloaded from the internet" flag from this app. Downloading straight from your browser skips this step.</p>
+        </div>
+        <div class="note">
+          <p><b>Your character code.</b> Keep it to bring your character back on another Mac.</p>
+          <div class="code"><code id="char-code"></code><button class="pill" type="button" data-copy="char-code">Copy</button></div>
+        </div>
+      </div>
+      <div>
+        <h4>Questions</h4>
+        <div class="faq">
+          <details><summary>Is it safe?</summary><p>Yes. The app only draws your character in a transparent window above the Dock. It doesn't read your files, doesn't go online and doesn't collect anything.</p></details>
+          <details><summary>Why does my Mac show a warning?</summary><p>macOS warns about any app distributed outside the App Store without Apple's paid developer signature. You only confirm it once.</p></details>
+          <details><summary>Does it drain my battery?</summary><p>Barely. When your character stands still, the app uses 0% CPU. While it walks, it stays around 1–2%.</p></details>
+          <details><summary>Will it get in the way of my Dock?</summary><p>No. Clicks go straight through to the Dock. It only reacts when you click the character itself.</p></details>
+          <details><summary>Does it work with a side or hidden Dock?</summary><p>Yes. On a side Dock it walks along the wall. With auto-hide on, it walks along the edge of the screen and hops up when the Dock appears.</p></details>
+          <details><summary>Why does it turn around before the end of the Dock?</summary><p>Without permission, the app estimates your Dock's size and keeps a small margin. From the menu bar, turn on "Use exact Dock position" and allow the app under Accessibility.</p></details>
+          <details><summary>How do I open it every time I start my Mac?</summary><p>Click your character's head in the menu bar and turn on "Open at login".</p></details>
+          <details><summary>How do I switch characters?</summary><p>Make a new one here and click Install on Mac again. It replaces the previous one.</p></details>
+          <details><summary>How do I quit or uninstall?</summary><p>Quit from the menu bar icon. To uninstall, drag the app from Applications to the Trash.</p></details>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- About -->
+<div class="veil" id="sheet-about" hidden>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="about-title">
+    <button class="round close" type="button" data-close aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="about">
+      <div class="portrait"><canvas class="px" id="portrait"></canvas></div>
+      <div>
+        <h2 id="about-title">Enzo V. Carrieri</h2>
+        <p class="role">Designer · São Paulo</p>
+        <p>Hey! I'm a designer based in São Paulo. Lately I've been venturing into AI and creative coding, mostly to see how quickly an idea can turn into something real.</p>
+        <p>Dock Companion started as a personal project: a little guy I made to keep me company on my own Dock. My friends liked him so much they pushed me to share him with the world, so here he is. Now you can make your own.</p>
+        <div class="links">
+          <a class="pill ink" href="https://work.enzocarrieri.com" target="_blank" rel="noopener">See my work</a>
+          <a class="pill" href="https://instagram.com/enzocarrieri" target="_blank" rel="noopener">Instagram</a>
+          <a class="pill" href="https://linkedin.com/in/carrierienzo" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+        <div class="mail">Say hi: <span id="email">enzo.carrieri.work@gmail.com</span><button class="pill" type="button" data-copy="email">Copy</button></div>
+        <p class="credit">Dock Companion is a personal project, built with Claude Code.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* Dock Companion — motor de sprites em pixel art.
+ * Cada personagem é montado a partir de partes desenhadas como texto (1 caractere = 1 pixel,
+ * só o preenchimento). O contorno é gerado automaticamente em volta de cada parte, e as cores
+ * vêm da configuração escolhida no criador. Tudo é desenhado numa grade 36x36 e centralizado
+ * num canvas 40x40, olhando para a direita (a esquerda é o espelho).
+ */
+(function (global) {
+  'use strict';
+
+  const N = 40, OX = 2, OY = 4;
+  const OUTLINE = '#160f1c';
+
+  // ---------- cores ----------
+  const hex2rgb = (h) => { h = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+  const rgb2hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  const mix = (a, b, t) => { const A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(A.map((v, i) => v + (B[i] - v) * t)); };
+  const luma = (h) => { const [r, g, b] = hex2rgb(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+  const pack = (h) => { const [r, g, b] = hex2rgb(h); return ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0; };
+
+  // ---------- pixmap ----------
+  class Pix {
+    constructor(w, h) { this.w = w; this.h = h; this.d = new Uint32Array(w * h); }
+    get(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.d[y * this.w + x] : 0; }
+    set(x, y, v) { if (v && x >= 0 && y >= 0 && x < this.w && y < this.h) this.d[y * this.w + x] = v; }
+  }
+  const fromRows = (rows, pal) => {
+    const w = Math.max(...rows.map((r) => r.length));
+    const p = new Pix(w, rows.length);
+    rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const v = pal[r[x]]; if (v) p.set(x, y, v); } });
+    return p;
+  };
+  const blit = (dst, src, ox, oy) => {
+    for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) {
+      const v = src.d[y * src.w + x]; if (v) dst.set(ox + x, oy + y, v);
+    }
+  };
+  const outline = (p) => {
+    const o = new Pix(p.w, p.h); o.d.set(p.d); const k = pack(OUTLINE);
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) {
+      if (!p.get(x, y) && (p.get(x - 1, y) || p.get(x + 1, y) || p.get(x, y - 1) || p.get(x, y + 1))) o.set(x, y, k);
+    }
+    return o;
+  };
+  const flipH = (p) => { const o = new Pix(p.w, p.h); for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) o.set(p.w - 1 - x, y, p.get(x, y)); return o; };
+  const flipVrows = (rows) => rows.slice().reverse();
+  const flipHrows = (rows) => { const w = Math.max(...rows.map((r) => r.length)); return rows.map((r) => r.padEnd(w, '.').split('').reverse().join('')); };
+  const recolor = (rows, from, to) => rows.map((r) => r.split(from).join(to));
+
+  /** Desenha uma nova camada (com contorno próprio) e a aplica no canvas. */
+  const layer = (canvas, draw) => { const p = new Pix(N, N); draw(p); blit(canvas, outline(p), 0, 0); };
+  const put = (p, rows, pal, x, y) => blit(p, fromRows(rows, pal), x + OX, y + OY);
+
+  /** Linha grossa (pincel 2x2) em coordenadas da grade 36. */
+  const stroke = (p, x0, y0, x1, y1, colorAt, brush = 2) => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1;
+    for (let i = 0; i <= n; i++) {
+      const x = Math.round(x0 + ((x1 - x0) * i) / n), y = Math.round(y0 + ((y1 - y0) * i) / n);
+      const c = colorAt(i, n);
+      for (let a = 0; a < brush; a++) for (let b = 0; b < brush; b++) p.set(x + a + OX, y + b + OY, c);
+    }
+  };
+  const polyline = (p, pts, colorAt) => {
+    let idx = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      stroke(p, x0, y0, x1, y1, (k) => colorAt(idx + k));
+      idx += Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    }
+  };
+
+  // =====================================================================
+  //  QUADRÚPEDES (cachorro e gato)
+  // =====================================================================
+  const Q = {
+    torsoLong: [
+      '............bbbb....',
+      '...........bbbbfb...',
+      '..........bbbbfbbb..',
+      '.hhhhhhhhhbbbfbbbbb.',
+      'hHHhhhhhhbbbfbbbbbbr',
+      'bbbbbbbbfbbbbbbfbbrr',
+      'bbbfbbbfbbbbbbfbbrrr',
+      'dbfbbbfbbbbbbfbbbrrr',
+      'ddbbbfbbbbbbfbbbrrrr',
+      'dddbdbdbdbdbdbdbrrr.',
+      '.dd.d.d.d.d.d.d.rr.r',
+      '..d.d...d...d...r...',
+    ],
+    torsoShort: [
+      '............bbbb....',
+      '...........bbbbfb...',
+      '..........bbbbfbbb..',
+      '.hhhhhhhhhbbbfbbbbb.',
+      'hHHhhhhhhbbbfbbbbbbr',
+      'bbbbbbbbfbbbbbbfbbrr',
+      'bbbfbbbfbbbbbbfbbrrr',
+      'dbfbbbfbbbbbbfbbbrrr',
+      '.dbbbfbbbbbbfbbbrrr.',
+      '..dddddddddddddrr...',
+    ],
+    torsoCat: [
+      '.............bbb....',
+      '............bbbbb...',
+      '...........bbbbbbb..',
+      '.hhhhhhhhhhbbbbbbb..',
+      'hHHhhhhhhhbbbbbbbbb.',
+      'bbbbbbbbbbbbbbbbbbr.',
+      'bbbbbbbbbbbbbbbbbrr.',
+      'dbbbbbbbbbbbbbbbrrr.',
+      '.ddbbbbbbbbbbbbrrr..',
+    ],
+    torsoLie: [
+      '..............bbbb..',
+      '.............bbbbfb.',
+      '..hhhhhhhhhhbbbbfbbb',
+      '.hHHhhhhhhbbbbbfbbbb',
+      'hbbbbbbbfbbbbbfbbbbr',
+      'bbbbbbbfbbbbbfbbbrrr',
+      'dbbbbbfbbbbbfbbbbrr.',
+      'dddbdbdbdbdbdbdbbr..',
+    ],
+    torsoSit: [
+      '..........bbbb.',
+      '.........bbbbfb',
+      '........bbbbfbb',
+      '........bbbfbbb',
+      '.......hbbfbbbr',
+      '......hHbbbbbrr',
+      '.....hbbbbbfbrr',
+      '....hbbbbbfbrrr',
+      '...hbbbbbfbbrr.',
+      '..hHbbbbfbbbbr.',
+      '.hbbbbbfbbbbbrr',
+      '.hbbbbfbbbbfb..',
+      'hbbbbfbbbbfbb..',
+      'bbbbbbbbbfbb...',
+      'bbbbbbbbfbbb...',
+      'dbbbbbbbbbbd...',
+      '.ddddddddd.....',
+    ],
+    torsoBelly: [
+      '..d.d...d...d...r...',
+      '.dd.d.d.d.d.d.d.rr..',
+      'ddbbbbfbbbbbbfbbrrr.',
+      'bbbbbbbfbbbbbbfbbrr.',
+      'bbbbbbbbfbbbbbbfbbbb',
+      'hbbbbbbbbbbbbbbbbbbb',
+      '.hhhhHHhhhhhhhhhhhh.',
+    ],
+    // Manchas (pintadas só onde já existe pelo)
+    patchTorso: [
+      '....................',
+      '....................',
+      '....................',
+      '..qqq.........qq....',
+      '.qqqqq.......qqqq...',
+      '.qqqqq........qqq...',
+      '..qqq......qq.......',
+      '..........qqqq......',
+      '...........qq.......',
+      '....................',
+      '....................',
+      '....................',
+    ],
+    stripes: [
+      '....................',
+      '....................',
+      '.............s......',
+      '...s...s...s.s......',
+      '...s...s...s..s.....',
+      '..s...s...s...s.....',
+      '..s...s...s.........',
+      '.s...s...s..........',
+      '....................',
+    ],
+
+    // Cabeças de cachorro: arredondada, olhinho com brilho, linguinha pra fora
+    dogHead: [
+      '...hhhh........',
+      '..hHHhhhh......',
+      '.hbbbbbbbb.....',
+      'hbbbbbbbbbb....',
+      'bbbbbbbbhhbb...',
+      'bbbbbbbbkwbbbb.',
+      'bbbbbbbbkkbbbbg',
+      'bbbbbbbbbbbbbnn',
+      '.bbbbbbbbbbkkk.',
+      '..bbbbbbbbbtT..',
+      '...bbbbbb..tT..',
+      '...........tt..',
+    ],
+    dogHeadBlink: [
+      '...hhhh........',
+      '..hHHhhhh......',
+      '.hbbbbbbbb.....',
+      'hbbbbbbbbbb....',
+      'bbbbbbbbbbbb...',
+      'bbbbbbbbbbbbbb.',
+      'bbbbbbbbkkbbbbg',
+      'bbbbbbbbbbbbbnn',
+      '.bbbbbbbbbbkkk.',
+      '..bbbbbbbbbtT..',
+      '...bbbbbb..tT..',
+      '...........tt..',
+    ],
+    dogHeadHappy: [
+      '...hhhh........',
+      '..hHHhhhh......',
+      '.hbbbbbbbb.....',
+      'hbbbbbbbbbb....',
+      'bbbbbbbbbbbb...',
+      'bbbbbbbbkbkbbb.',
+      'bbbbbbbbbbbbbbg',
+      'bbbbbbbbbbbbbnn',
+      '.bbbbbbbbbmmmm.',
+      '..bbbbbbbbbtT..',
+      '...bbbbbb..tT..',
+      '...........tT..',
+      '...........tt..',
+    ],
+    dogHeadBark: [
+      '...hhhh........',
+      '..hHHhhhh......',
+      '.hbbbbbbbb.....',
+      'hbbbbbbbbbb....',
+      'bbbbbbbbhhbb...',
+      'bbbbbbbbkwbbbb.',
+      'bbbbbbbbkkbbbbg',
+      'bbbbbbbbbbmmmnn',
+      '.bbbbbbbbbmmm..',
+      '..bbbbbbbbbbbb.',
+      '...bbbbbb......',
+    ],
+    dogHeadSleep: [
+      '...hhhh........',
+      '..hHHhhhh......',
+      '.hbbbbbbbb.....',
+      'hbbbbbbbbbb....',
+      'bbbbbbbbbbbb...',
+      'bbbbbbbbbbbbbb.',
+      'bbbbbbbbkkbbbbg',
+      'bbbbbbbbbbbbbnn',
+      '.bbbbbbbbbbkkk.',
+      '..bbbbbbbbb....',
+      '...bbbbbb......',
+    ],
+    earFloppyLong: [
+      '.hd.', 'hddd', 'dfdd', 'dfdd', 'ddfd', 'ddfd', 'dfdd', 'dfdd', 'ddd.', 'd.d.',
+    ],
+    earFloppyShort: [
+      '.hd.', 'hddd', 'dddd', 'dddd', 'dddd', 'ddd.', '.d..',
+    ],
+    earFlap: ['hdddd..', '.dfdddd', '..ddfdd', '...dd.d'],
+    earUp: ['...hb', '..bbb', '..bib', '.bbib', '.bbbb', 'bbbbb'],
+
+    // Rabos em pluma (pelo longo)
+    tailPlume: {
+      down: ['.....hbb', '....hbbb', '...bfbb.', '..bbfbd.', '.bbfbd..', '.bfbdd..', 'bbfdd...', 'bfddd...', 'bddd.d..', 'bdd.....', 'dd.d....', 'd.......'],
+      mid: ['........hb', '....hbbbbb', '..bbfbbbb.', '.bbfbbdd..', 'bbddd.d...', 'd.d.......'],
+      upA: ['hb.....', 'bbb....', 'bfbb...', 'dbfbb..', '.dbfbb.', 'd.dbbbb', '...dbbb', '....dbb', '.....bb', '.....bb'],
+      upB: ['..hb..', '.bbb..', '.bfb..', 'dbbfb.', '.dbbb.', '..dfbb', '..dbbb', '...bbb', '....bb', '....bb'],
+      floor: ['.........hbb', '......hbbbbb', '..bbbfbbbbb.', 'dddddddd.d..'],
+    },
+    tailCurl: ['.hbb.', 'bb.bb', 'b..bb', '.bbb.', '..bb.'],
+    tailStub: ['hb.', 'bbb', '.bb'],
+
+    // Gato
+    catHead: [
+      '..hhhhh.....',
+      '.hHhhhhhh...',
+      'bbbbbbbbbb..',
+      'bbbbbbbbbbb.',
+      'bbbbbbbyybbb',
+      'bbbbbbbykbbi',
+      'rbbbbbbbbbm.',
+      '.rrbbbbbbb..',
+      '..rrbbbb....',
+    ],
+    catHeadBlink: [
+      '..hhhhh.....',
+      '.hHhhhhhh...',
+      'bbbbbbbbbb..',
+      'bbbbbbbbbbb.',
+      'bbbbbbbbbbbb',
+      'bbbbbbbkkbbi',
+      'rbbbbbbbbbm.',
+      '.rrbbbbbbb..',
+      '..rrbbbb....',
+    ],
+    catHeadHappy: [
+      '..hhhhh.....',
+      '.hHhhhhhh...',
+      'bbbbbbbbbb..',
+      'bbbbbbbbbbb.',
+      'bbbbbbbkbkbb',
+      'bbbbbbbbbbbi',
+      'rbbbbbbbbmm.',
+      '.rrbbbbbmm..',
+      '..rrbbbb....',
+    ],
+    catHeadMeow: [
+      '..hhhhh.....',
+      '.hHhhhhhh...',
+      'bbbbbbbbbb..',
+      'bbbbbbbbbbb.',
+      'bbbbbbbyybbb',
+      'bbbbbbbykbbi',
+      'rbbbbbbbbmm.',
+      '.rrbbbbbmmm.',
+      '..rrbbbbbb..',
+    ],
+    catEar: ['..b..', '.bbb.', '.bib.', 'bbbbb'],
+  };
+
+  // Rabo fino (cachorro de pelo curto e gato): polilinhas por estado
+  const POLY = {
+    dog: {
+      down: [[8, 22], [6, 25], [5, 29], [5, 31]],
+      mid: [[8, 22], [5, 21], [2, 20], [0, 19]],
+      upA: [[8, 22], [6, 18], [4, 14], [3, 11]],
+      upB: [[8, 22], [7, 18], [7, 14], [8, 11]],
+      floor: [[11, 33], [6, 33], [1, 32]],
+    },
+    cat: {
+      down: [[8, 21], [5, 18], [3, 14], [4, 11], [6, 10]],
+      mid: [[8, 21], [5, 19], [3, 15], [3, 12], [5, 10]],
+      upA: [[8, 21], [6, 16], [6, 12], [7, 9], [9, 8]],
+      upB: [[8, 21], [7, 16], [8, 12], [10, 10], [12, 10]],
+      floor: [[11, 33], [6, 33], [2, 32], [1, 29]],
+    },
+  };
+
+  function quadPalette(c) {
+    const F = c.fur;
+    const dark = luma(F) < 0.35;
+    const pal = {
+      b: F,
+      d: mix(F, '#0d0a12', dark ? 0.4 : 0.28),
+      f: dark ? mix(F, '#ffffff', 0.1) : mix(F, '#000000', 0.1),
+      h: mix(F, '#ffffff', dark ? 0.22 : 0.28),
+      H: mix(F, '#ffffff', dark ? 0.42 : 0.55),
+      r: c.chest || F,
+      q: c.patch || F,
+      s: mix(F, '#0d0a12', 0.45),        // listras
+      k: OUTLINE, n: '#120c16', w: '#ffffff', g: '#a7a0b0',
+      t: '#e8455e', T: '#b02a45', m: '#5e1828',
+      i: mix(F, '#f08aa0', 0.6),
+      y: c.eyes || '#8cc63f',
+      c: c.collar || F, C: '#f2c14e',
+    };
+    const out = {}; for (const k in pal) out[k] = pack(pal[k]); return out;
+  }
+
+  // Pernas: linha de 2 px com pata para a frente, franja de pelo longo e "meias" opcionais.
+  function drawLeg(p, L, pal, cfg) {
+    const fill = L.far ? pal.d : pal.b;
+    const sock = cfg.socks ? pal.r : fill;
+    const [x0, y0] = L.top, [x1, y1] = L.bottom;
+    if (y0 === y1) {
+      for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) {
+        const c = Math.abs(x - x1) <= 1 && cfg.socks ? sock : fill;
+        p.set(x + OX, y0 + OY, c); p.set(x + OX, y0 - 1 + OY, c);
+      }
+      return;
+    }
+    const xAt = (y) => Math.round(x0 + ((x1 - x0) * (y - y0)) / (y1 - y0));
+    for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) {
+      const x = xAt(y), c = Math.abs(y - y1) <= 1 ? sock : fill;
+      p.set(x + OX, y + OY, c); p.set(x + 1 + OX, y + OY, c);
+    }
+    if (cfg.longFur && L.feather && y1 - y0 >= 6) {
+      if (L.feather === 'front') { for (let y = y0 + 2; y <= y1 - 3; y++) p.set(xAt(y) - 1 + OX, y + OY, pal.d); p.set(xAt(y1 - 3) - 2 + OX, y1 - 3 + OY, pal.d); }
+      else { for (let y = y0 + 1; y <= y0 + 4; y++) p.set(xAt(y) - 1 + OX, y + OY, pal.d); p.set(xAt(y0 + 4) - 2 + OX, y0 + 4 + OY, pal.d); }
+    }
+    if (L.paw !== false) p.set(x1 + 2 + OX, y1 + OY, sock);
+  }
+
+  const stand4 = (dx = [0, 0, 0, 0], lifted = []) => {
+    const tops = [[10, 25], [12, 25], [21, 25], [23, 25]];
+    return tops.map((t, i) => ({ top: t, bottom: [t[0] + dx[i], lifted.includes(i) ? 32 : 34], far: i % 2 === 0, feather: i < 2 ? 'back' : 'front' }));
+  };
+
+  function quadPose(cfg, pose) {
+    const cat = cfg.species === 'cat';
+    const pal = quadPalette(cfg);
+    const longFur = !cat && cfg.coat === 'long';
+    const c2 = { socks: cfg.socks, longFur };
+
+    // Especificação padrão (em pé)
+    const s = {
+      torso: cat ? Q.torsoCat : longFur ? Q.torsoLong : Q.torsoShort, torsoX: 8, torsoY: 18,
+      head: cat ? Q.catHead : Q.dogHead, headX: cat ? 22 : 21, headY: cat ? 11 : 8, headFlip: false,
+      tail: 'down', tailDY: 0, legs: stand4(), lift: 0, drop: 0, flap: false,
+    };
+    const H = (k) => Q[(cat ? 'catHead' : 'dogHead') + k];
+
+    switch (pose) {
+      case 'stand': break;
+      case 'blink': s.head = H('Blink'); break;
+      case 'happy': case 'wagA': s.head = H('Happy'); s.tail = 'upA'; break;
+      case 'wagB': s.head = H('Happy'); s.tail = 'upB'; break;
+      case 'walk1': s.legs = stand4([2, -2, -2, 2]); s.tail = 'mid'; break;
+      case 'walk2': s.legs = stand4([0, 0, 0, 0], [1, 2]); s.tail = 'mid'; s.lift = 1; break;
+      case 'walk3': s.legs = stand4([-2, 2, 2, -2]); s.tail = 'mid'; break;
+      case 'walk4': s.legs = stand4([0, 0, 0, 0], [0, 3]); s.tail = 'mid'; s.lift = 1; break;
+      case 'run1': case 'run3':
+        s.legs = [{ top: [10, 25], bottom: [4, 32], far: true, feather: 'back' }, { top: [12, 25], bottom: [6, 33], feather: 'back' },
+          { top: [21, 25], bottom: [27, 32], far: true, feather: 'front' }, { top: [23, 25], bottom: [29, 33], feather: 'front' }];
+        s.tail = 'mid'; s.tailDY = -1; s.lift = 1; s.flap = true; if (pose === 'run3') s.head = H('Happy'); break;
+      case 'run2': case 'run4':
+        s.legs = [{ top: [10, 25], bottom: [15, 32], far: true }, { top: [12, 25], bottom: [17, 33] },
+          { top: [21, 25], bottom: [17, 32], far: true }, { top: [23, 25], bottom: [19, 33] }];
+        s.tail = 'mid'; s.tailDY = -1; s.lift = 2; s.flap = true; if (pose === 'run4') s.head = H('Happy'); break;
+      case 'sniff1': case 'sniff2':
+        s.headY = cat ? 22 : 21; s.head = cat ? Q.catHead : (pose === 'sniff1' ? Q.dogHead : Q.dogHeadSleep);
+        s.tail = pose === 'sniff2' ? 'upB' : 'upA'; break;
+      case 'bark': s.head = cat ? Q.catHeadMeow : Q.dogHeadBark; s.headY -= 1; s.tail = 'upA'; break;
+      case 'lookBack': s.headFlip = true; s.headX = cat ? 11 : 12; break;
+      case 'crouch': s.drop = 2; s.tail = 'mid'; break;
+      case 'jump':
+        s.legs = [{ top: [10, 25], bottom: [3, 29], far: true }, { top: [12, 25], bottom: [5, 30] },
+          { top: [21, 25], bottom: [28, 28], far: true }, { top: [23, 25], bottom: [30, 29] }];
+        s.head = H('Happy'); s.tail = 'upA'; s.flap = true; break;
+      case 'sit': case 'sitBlink': case 'sitHappy': case 'scratch1': case 'scratch2': case 'groom1': case 'groom2':
+        s.torso = Q.torsoSit; s.torsoX = 11; s.torsoY = 18;
+        s.headX = cat ? 21 : 20; s.headY = cat ? 11 : 8; s.tail = 'floor';
+        s.legs = [{ top: [22, 27], bottom: [22, 34], far: true, feather: 'front' }, { top: [24, 27], bottom: [24, 34], feather: 'front' },
+          { top: [14, 34], bottom: [20, 34], paw: false }];
+        if (pose === 'sitBlink') s.head = H('Blink');
+        if (pose === 'sitHappy') s.head = H('Happy');
+        if (pose === 'scratch1' || pose === 'scratch2') {
+          s.head = H('Blink'); s.headY += 2;
+          const up = pose === 'scratch1';
+          s.legs[2] = { top: [15, 31], bottom: [up ? 23 : 22, up ? 22 : 25], paw: false };
+        }
+        if (pose === 'groom1' || pose === 'groom2') {
+          s.head = H('Blink'); s.headY += 3; s.headX -= 1;
+          const up = pose === 'groom1';
+          s.legs[1] = { top: [24, 27], bottom: [up ? 27 : 26, up ? 22 : 24], feather: 'front' };
+        }
+        break;
+      case 'lie': case 'lieBlink': case 'sleep':
+        s.torso = Q.torsoLie; s.torsoX = 7; s.torsoY = 27; s.tail = 'floor';
+        s.legs = cat ? [] : [{ top: [22, 33], bottom: [31, 33], far: true, paw: false }, { top: [21, 34], bottom: [30, 34], paw: false }];
+        if (cat) s.legs = [{ top: [21, 34], bottom: [27, 34], paw: false }];
+        s.headX = cat ? 21 : 20; s.headY = cat ? 19 : 16;
+        if (pose === 'lieBlink') s.head = H('Blink');
+        if (pose === 'sleep') { s.head = cat ? Q.catHeadBlink : Q.dogHeadSleep; s.headX += 1; s.headY = cat ? 25 : 23; }
+        break;
+      case 'bow':
+        s.legs = [{ top: [10, 22], bottom: [10, 34], far: true, feather: 'back' }, { top: [12, 22], bottom: [12, 34], feather: 'back' },
+          { top: [22, 33], bottom: [31, 33], far: true, paw: false }, { top: [21, 34], bottom: [30, 34], paw: false }];
+        s.torsoY = 17; s.headX = cat ? 21 : 20; s.headY = cat ? 24 : 21; s.head = H('Happy'); s.tail = 'upA'; s.tailDY = -4; break;
+      case 'belly1': case 'belly2': {
+        const a = pose === 'belly1' ? 0 : 1;
+        s.torso = Q.torsoBelly; s.torsoX = 7; s.torsoY = 28; s.tail = 'floor';
+        s.legs = [{ top: [10, 29], bottom: [8 + a, 22], far: true, paw: false }, { top: [13, 29], bottom: [12 - a, 22], paw: false },
+          { top: [20, 29], bottom: [19 + a, 22], far: true, paw: false }, { top: [23, 29], bottom: [24 - a, 22], paw: false }];
+        s.head = flipVrows(H('Happy')); s.headX = 21; s.headY = cat ? 26 : 22; s.bellyUp = true;
+        break;
+      }
+      default: break;
+    }
+
+    const canvas = new Pix(N, N);
+    const lift = s.lift, drop = s.drop;
+    const sh = (L) => ({ ...L, top: [L.top[0], L.top[1] - lift + drop], bottom: [L.bottom[0], L.bottom[1] - lift] });
+
+    // pernas (longe → perto)
+    for (const L of s.legs.filter((l) => l.far)) layer(canvas, (p) => drawLeg(p, sh(L), pal, c2));
+    for (const L of s.legs.filter((l) => !l.far)) layer(canvas, (p) => drawLeg(p, sh(L), pal, c2));
+
+    // rabo
+    const ty = -lift + drop + s.tailDY;
+    const tailType = cat ? 'poly' : cfg.tail;
+    layer(canvas, (p) => {
+      if (tailType === 'plume') {
+        const pos = { down: [1, 21], mid: [0, 19], upA: [2, 12], upB: [5, 12], floor: [0, 31] }[s.tail];
+        put(p, Q.tailPlume[s.tail], pal, pos[0], pos[1] + (s.tail === 'floor' ? 0 : ty));
+      } else if (tailType === 'curl') {
+        const pos = s.tail === 'floor' ? [9, 25] : [4 + (s.tail === 'upB' ? 1 : 0), 16 + ty];
+        put(p, Q.tailCurl, pal, pos[0], pos[1]);
+      } else if (tailType === 'stub') {
+        const pos = s.tail === 'floor' ? [9, 31] : s.tail === 'down' ? [6, 21 + ty] : [5 + (s.tail === 'upB' ? 1 : 0), 19 + ty];
+        put(p, Q.tailStub, pal, pos[0], pos[1]);
+      } else {
+        const pts = (cat ? POLY.cat : POLY.dog)[s.tail].map(([x, y]) => [x, s.tail === 'floor' ? y : y + ty]);
+        const striped = cat && cfg.pattern === 'tabby';
+        polyline(p, pts, (i) => (striped && Math.floor(i / 2) % 2 ? pal.s : pal.b));
+      }
+    });
+
+    // tronco (+ manchas / listras pintadas só onde há pelo)
+    layer(canvas, (p) => {
+      const tp = new Pix(N, N);
+      put(tp, s.torso, pal, s.torsoX, s.torsoY - lift + drop);
+      const paint = (rows) => {
+        const m = new Pix(N, N); put(m, rows, pal, s.torsoX, s.torsoY - lift + drop);
+        for (let i = 0; i < tp.d.length; i++) if (tp.d[i] && m.d[i] && tp.d[i] !== pal.r) tp.d[i] = m.d[i];
+      };
+      const standing = s.torso === Q.torsoLong || s.torso === Q.torsoShort || s.torso === Q.torsoCat;
+      if (standing && cfg.patches) paint(Q.patchTorso);
+      if (standing && cat && cfg.pattern === 'tabby') paint(Q.stripes);
+      blit(p, tp, 0, 0);
+    });
+
+    // coleira
+    if (cfg.collar && !s.bellyUp) {
+      layer(canvas, (p) => {
+        const cx = s.headX + (cat ? -1 : 0), cy = s.headY + (cat ? 8 : 10) - lift + drop;
+        if (!s.headFlip) put(p, ['....cc', '..cccc', 'cccc..', 'cC....'], pal, cx - 1, cy - 1);
+      });
+    }
+
+    // orelhas atrás da cabeça (em pé / gato)
+    const hy = s.headY - lift + drop;
+    const headRows = s.headFlip ? flipHrows(s.head) : s.head;
+    const hw = Math.max(...s.head.map((r) => r.length));
+    const ex = (x, w) => (s.headFlip ? s.headX + hw - x - w : s.headX + x);
+    if (!s.bellyUp) {
+      if (cat) {
+        layer(canvas, (p) => put(p, recolor(Q.catEar, 'b', 'd'), pal, ex(1, 5), hy - 3));
+        layer(canvas, (p) => put(p, Q.catEar, pal, ex(5, 5), hy - 3));
+      } else if (cfg.ears === 'up' && !s.flap) {
+        const er = s.headFlip ? flipHrows(Q.earUp) : Q.earUp;
+        layer(canvas, (p) => put(p, recolor(er, 'b', 'd'), pal, ex(1, 5), hy - 4));
+        layer(canvas, (p) => put(p, er, pal, ex(4, 5), hy - 5));
+      }
+    }
+
+    // cabeça
+    layer(canvas, (p) => put(p, headRows, pal, s.headX, hy));
+
+    // orelha caída por cima
+    if (!cat && !s.bellyUp && (cfg.ears !== 'up' || s.flap)) {
+      if (s.flap) layer(canvas, (p) => put(p, Q.earFlap, pal, s.headX - 2, hy + 1));
+      else {
+        const er0 = longFur ? Q.earFloppyLong : Q.earFloppyShort;
+        const er = s.headFlip ? flipHrows(er0) : er0;
+        const ew = Math.max(...er0.map((r) => r.length));
+        layer(canvas, (p) => put(p, er, pal, ex(2, ew), hy + 3));
+      }
+    }
+    if (!cat && s.bellyUp) layer(canvas, (p) => put(p, flipVrows(longFur ? Q.earFloppyLong : Q.earFloppyShort), pal, s.headX + 2, hy - 1));
+
+    // bigodes do gato (sem contorno)
+    if (cat && !s.bellyUp) {
+      const wc = pack('#e9e4ee');
+      const pts = s.headFlip ? [[-1, 5], [-2, 4], [-1, 7], [-2, 7]] : [[12, 5], [13, 4], [12, 7], [13, 7]];
+      for (const [x, y] of pts) if (!canvas.get(s.headX + x + OX, hy + y + OY)) canvas.set(s.headX + x + OX, hy + y + OY, wc);
+    }
+    return canvas;
+  }
+
+  const QUAD_POSES = ['stand', 'blink', 'happy', 'wagA', 'wagB', 'walk1', 'walk2', 'walk3', 'walk4', 'run1', 'run2', 'run3', 'run4',
+    'sniff1', 'sniff2', 'bark', 'lookBack', 'crouch', 'jump', 'sit', 'sitBlink', 'sitHappy', 'scratch1', 'scratch2', 'groom1', 'groom2',
+    'lie', 'lieBlink', 'sleep', 'bow', 'belly1', 'belly2'];
+
+  // =====================================================================
+  //  PESSOA
+  // =====================================================================
+  const P = {
+    head: [
+      '....sssss.....',
+      '..sssssssss...',
+      '.sssssssssss..',
+      'sssssssssssss.',
+      'sssssssssssss.',
+      'sssssssssnsss.',
+      'ssSssssssnssss',
+      'sSSssssssssss.',
+      'ssSssssssssss.',
+      'sssssssmmsss..',
+      '.sssssssssss..',
+      '..ssssssss....',
+    ],
+    hair: {
+      short: { dx: 0, dy: -1, rows: [
+        '....aaaaa.....',
+        '..aaaaaaaaa...',
+        '.aaaaAAaaaaa..',
+        'aaaaaaaaaaaa..',
+        'aaaaaaaaaaaa..',
+        'aaaaa.aa.a....',
+        'aa............',
+      ] },
+      spiky: { dx: 0, dy: -4, rows: [
+        '..a..a..a.....',
+        '.aa.aa.aa.a...',
+        '.aaaaaaaaaaa..',
+        'aaaaaaaaaaaaa.',
+        'aaaaaAAaaaaa..',
+        'aaaaaaaaaaaa..',
+        'aaaaaaaaaaaa..',
+        'aaaa.aa.a.a...',
+        'aa............',
+      ] },
+      curly: { dx: -2, dy: -4, rows: [
+        '....aaaaaaa......',
+        '..aaaaaaaaaaa....',
+        '.aaaaaAAaaaaaa...',
+        'aaaaaaaaaaaaaaa..',
+        'aaaaaaaaaaaaaaa..',
+        'aaaaaaaaaaaaaaa..',
+        'aaaaaaaaaaaaaa...',
+        'aaaaaaa.a.a.a....',
+        'aaaaa............',
+        'aaaa.............',
+        '.aa..............',
+      ] },
+      long: { dx: -1, dy: -1, rows: [
+        '.....aaaaa.....',
+        '...aaaaaaaaa...',
+        '..aaaaaAAaaaa..',
+        '.aaaaaaaaaaaa..',
+        '.aaaaaaaaaaaa..',
+        'aaaaaa.aaa.a...',
+        'aaaa...........',
+        'aaaa...........',
+        'aaaa...........',
+        'aaaa...........',
+        'aaaa...........',
+        'aaaa...........',
+        'aaaa...........',
+        '.aaa...........',
+        '..a............',
+      ] },
+      bun: { dx: -1, dy: -4, rows: [
+        '..aaa..........',
+        '.aaaaa.........',
+        '.aaaaa.........',
+        '..aaaaaaaa.....',
+        '..aaaaAAaaaa...',
+        '.aaaaaaaaaaaa..',
+        '.aaaaaaaaaaaa..',
+        '.aaaaaaaaaa....',
+        '.aaa...........',
+      ] },
+      bob: { dx: -1, dy: -1, rows: [
+        '.....aaaaa.....',
+        '...aaaaaaaaa...',
+        '..aaaaaAAaaaa..',
+        '.aaaaaaaaaaaaa.',
+        '.aaaaaaaaaaaaa.',
+        '.aaaaaaaaa.....',
+        'aaaaa..........',
+        'aaaaa..........',
+        'aaaaa..........',
+        'aaaa...........',
+        '.aa............',
+      ] },
+      buzz: { dx: 0, dy: 0, rows: [
+        '....AAAAA.....',
+        '..AAAAAAAAA...',
+        '.AAAAAAAAAA...',
+        'AAAAAAAAAA....',
+        'AAA...........',
+      ] },
+      bald: null,
+    },
+    cap: { dx: -1, dy: -2, rows: [
+      '....zzzzzz......',
+      '..zzzzzzzzzz....',
+      '.zzzzZzzzzzzz...',
+      '.zzzzzzzzzzzzzzz',
+    ] },
+    beanie: { dx: -1, dy: -3, rows: [
+      '.....zzz......',
+      '...zzzzzzz....',
+      '..zzzzzzzzzz..',
+      '.zzzzzzzzzzzz.',
+      '.ZZZZZZZZZZZZ.',
+      '.ZZZZZZZZZZZZ.',
+    ] },
+  };
+
+  function personPalette(c) {
+    const skin = c.skin, hair = c.hairColor;
+    const pal = {
+      s: skin, S: mix(skin, '#5a2a1a', 0.22),
+      a: hair, A: mix(hair, '#ffffff', luma(hair) < 0.3 ? 0.18 : 0.25),
+      B: mix(skin, hair, 0.28),
+      n: '#1a1220', m: '#6e2b33', w: '#ffffff', k: OUTLINE,
+      e: c.shirt, E: mix(c.shirt, '#0d0a12', 0.3),
+      p: c.pants, P: mix(c.pants, '#0d0a12', 0.3),
+      o: c.shoes, O: mix(c.shoes, '#0d0a12', 0.3),
+      z: c.hatColor || '#d23b3b', Z: mix(c.hatColor || '#d23b3b', '#0d0a12', 0.25),
+      l: c.glasses === 'round' ? '#c9a24a' : '#1a1220', L: '#c6dcef',
+    };
+    const out = {}; for (const k in pal) out[k] = pack(pal[k]); return out;
+  }
+
+  function personHeadRows(cfg, face) {
+    let rows = P.head.slice();
+    const setc = (x, y, ch) => { rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1); };
+    if (face === 'blink') { setc(9, 5, 's'); setc(9, 6, 'n'); }
+    if (face === 'happy') { setc(9, 6, 's'); setc(8, 6, 'n'); setc(9, 5, 'n'); setc(10, 6, 'n'); for (const x of [7, 8, 9, 10]) setc(x, 9, 'm'); setc(8, 10, 'm'); setc(9, 10, 'm'); }
+    if (face === 'oh') { setc(7, 9, 's'); setc(8, 9, 'm'); setc(9, 9, 'm'); setc(8, 10, 'm'); setc(9, 10, 'm'); }
+    if (cfg.beard === 'stubble') for (const [x, y] of [[4, 10], [6, 11], [8, 11], [10, 10], [9, 8], [11, 8], [5, 9], [3, 9]]) if (rows[y][x] === 's') setc(x, y, 'B');
+    if (cfg.beard === 'full') for (let y = 8; y <= 11; y++) for (let x = 2; x <= 12; x++) if (rows[y][x] === 's' && !(y === 9 && (x === 7 || x === 8))) setc(x, y, 'a');
+    if (cfg.beard === 'mustache') for (let x = 7; x <= 10; x++) setc(x, 8, 'a');
+    return rows;
+  }
+
+  function personPose(cfg, pose) {
+    const pal = personPalette(cfg);
+    const canvas = new Pix(N, N);
+    const pants = cfg.pantsType === 'pants';
+
+    const s = {
+      headX: 11, headY: 8, face: 'normal', headFlip: false, torsoY: 20, lift: 0,
+      legs: [{ hip: [15, 29], foot: [15, 34], far: true }, { hip: [18, 29], foot: [18, 34] }],
+      arms: [{ sh: [14, 21], hand: [14, 27], far: true }, { sh: [19, 21], hand: [19, 27] }],
+      sit: false,
+    };
+    const L = (fdx, ndx, lf = [], ln = []) => [
+      { hip: [15, 29], foot: [15 + fdx, lf.length ? 32 : 34], far: true },
+      { hip: [18, 29], foot: [18 + ndx, ln.length ? 32 : 34] },
+    ];
+    const A = (fdx, ndx, fy = 27, ny = 27) => [{ sh: [14, 21], hand: [14 + fdx, fy], far: true }, { sh: [19, 21], hand: [19 + ndx, ny] }];
+
+    switch (pose) {
+      case 'stand': break;
+      case 'blink': s.face = 'blink'; break;
+      case 'happy': case 'wagA': case 'wagB': s.face = 'happy'; break;
+      case 'walk1': s.legs = L(-2, 2); s.arms = A(2, -2); break;
+      case 'walk2': s.legs = L(0, 0, [1]); s.lift = 1; break;
+      case 'walk3': s.legs = L(2, -2); s.arms = A(-2, 2); break;
+      case 'walk4': s.legs = L(0, 0, [], [1]); s.lift = 1; break;
+      case 'run1': case 'run3': s.legs = L(-4, 4); s.arms = A(4, -4, 25, 25); s.headX += 1; s.lift = 1; if (pose === 'run3') s.face = 'happy'; break;
+      case 'run2': case 'run4': s.legs = L(1, -1, [1], [1]); s.arms = A(-3, 3, 25, 25); s.headX += 1; s.lift = 2; if (pose === 'run4') s.face = 'happy'; break;
+      case 'jump': s.face = 'happy'; s.legs = [{ hip: [15, 29], foot: [13, 32], far: true }, { hip: [18, 29], foot: [20, 32] }];
+        s.arms = [{ sh: [14, 21], hand: [10, 14], far: true }, { sh: [19, 21], hand: [23, 14] }]; break;
+      case 'surprised': case 'bark': s.face = 'oh'; s.arms = [{ sh: [14, 21], hand: [10, 15], far: true }, { sh: [19, 21], hand: [23, 15] }]; break;
+      case 'crouch': s.lift = -2; s.legs = [{ hip: [15, 31], foot: [14, 34], far: true }, { hip: [18, 31], foot: [19, 34] }]; break;
+      case 'lookBack': s.headFlip = true; s.headX = 10; break;
+      case 'wave1': case 'wave2': s.face = 'happy'; s.arms = [{ sh: [14, 21], hand: [14, 27], far: true }, { sh: [19, 21], hand: pose === 'wave1' ? [23, 13] : [21, 12] }]; break;
+      case 'sit': case 'sitBlink': case 'sitHappy': case 'sleep':
+        s.sit = true; s.headY = 13; s.torsoY = 25;
+        s.face = pose === 'sitBlink' || pose === 'sleep' ? 'blink' : pose === 'sitHappy' ? 'happy' : 'normal';
+        if (pose === 'sleep') s.headY = 14;
+        s.arms = [{ sh: [14, 26], hand: [17, 31], far: true }, { sh: [19, 26], hand: [22, 31] }];
+        break;
+      default: break;
+    }
+
+    const lift = s.lift;
+    const shirtLen = 3; // manga curta
+
+    // braço de trás
+    const drawArm = (a) => layer(canvas, (p) => {
+      const sh = [a.sh[0], a.sh[1] - lift], hd = [a.hand[0], a.hand[1] - lift];
+      stroke(p, sh[0], sh[1], hd[0], hd[1], (i) => (i < shirtLen ? (a.far ? pal.E : pal.e) : a.far ? pal.S : pal.s));
+    });
+    const drawLegP = (l) => layer(canvas, (p) => {
+      const hip = [l.hip[0], l.hip[1] - lift], ft = [l.foot[0], l.foot[1] - (l.foot[1] < 34 ? lift : 0)];
+      if (s.sit) return;
+      stroke(p, hip[0], hip[1], ft[0], ft[1] - 1, (i) => (pants || i < 1 ? (l.far ? pal.P : pal.p) : l.far ? pal.S : pal.s));
+      const sc = l.far ? pal.O : pal.o;
+      for (let x = 0; x <= 3; x++) p.set(ft[0] + x + OX, ft[1] + OY, sc);
+      for (let x = 0; x <= 2; x++) p.set(ft[0] + x + OX, ft[1] - 1 + OY, sc);
+    });
+
+    s.legs.filter((l) => l.far).forEach(drawLegP);
+    s.arms.filter((a) => a.far).forEach(drawArm);
+    s.legs.filter((l) => !l.far).forEach(drawLegP);
+
+    // pernas sentado: esticadas para a frente sobre o Dock
+    if (s.sit) {
+      layer(canvas, (p) => {
+        for (let x = 17; x <= 25; x++) { const c = pants || x < 19 ? pal.p : pal.s; p.set(x + OX, 33 + OY, c); p.set(x + OX, 34 + OY, c); }
+        for (let y = 30; y <= 34; y++) { p.set(26 + OX, y + OY, pal.o); p.set(27 + OX, y + OY, pal.o); }
+      });
+    }
+
+    // tronco
+    layer(canvas, (p) => {
+      const ty = s.torsoY - lift;
+      put(p, [
+        '.eeeeeeee.',
+        'eeeeeeeeee',
+        'eeeeeeeeee',
+        'eeeeeeeeee',
+        'eeeeeeeeee',
+        'EEEEEEEEEE',
+        'pppppppppp',
+        'pppppppppp',
+        s.sit ? 'pppppppppp' : 'ppppp.pppp',
+      ], pal, 13, ty);
+    });
+
+    // braço da frente
+    s.arms.filter((a) => !a.far).forEach(drawArm);
+
+    // cabeça + cabelo + chapéu
+    const hx = s.headX, hy = s.headY - lift;
+    const head = personHeadRows(cfg, s.face);
+    const hr = s.headFlip ? flipHrows(head) : head;
+    layer(canvas, (p) => put(p, hr, pal, hx, hy));
+    const hair = P.hair[cfg.hair];
+    const hw = 14;
+    if (hair) {
+      const rows = s.headFlip ? flipHrows(hair.rows) : hair.rows;
+      const w = Math.max(...hair.rows.map((r) => r.length));
+      const x = s.headFlip ? hx + hw - hair.dx - w : hx + hair.dx;
+      layer(canvas, (p) => put(p, rows, pal, x, hy + hair.dy));
+    }
+    if (cfg.hat === 'cap' || cfg.hat === 'beanie') {
+      const h = P[cfg.hat];
+      const rows = s.headFlip ? flipHrows(h.rows) : h.rows;
+      const w = Math.max(...h.rows.map((r) => r.length));
+      const x = s.headFlip ? hx + hw - h.dx - w : hx + h.dx;
+      layer(canvas, (p) => put(p, rows, pal, x, hy + h.dy));
+    }
+
+    // óculos (arame fino, sem contorno)
+    if (cfg.glasses && cfg.glasses !== 'none' && !s.headFlip) {
+      const ex = hx + 9, ey = hy + 5; // olho
+      const set = (x, y, c) => canvas.set(x + OX, y + OY, c);
+      const ring = cfg.glasses === 'square'
+        ? [[-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1], [-2, 0], [2, 0], [-2, 1], [2, 1], [-2, 2], [-1, 2], [0, 2], [1, 2], [2, 2]]
+        : [[-1, -1], [0, -1], [1, -1], [-2, 0], [2, 0], [-2, 1], [2, 1], [-1, 2], [0, 2], [1, 2]];
+      if (cfg.glasses === 'sun') for (const [x, y] of [[-1, 0], [0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) set(ex + x, ey + y, pal.n);
+      for (const [x, y] of ring) set(ex + x, ey + y, pal.l);
+      for (const [x, y] of [[-3, 0], [-4, 0], [-5, 0], [-6, 1], [3, 0], [4, 0]]) set(ex + x, ey + y, pal.l);
+    }
+    return canvas;
+  }
+
+  const PERSON_POSES = ['stand', 'blink', 'happy', 'walk1', 'walk2', 'walk3', 'walk4', 'run1', 'run2', 'run3', 'run4',
+    'jump', 'surprised', 'crouch', 'lookBack', 'wave1', 'wave2', 'sit', 'sitBlink', 'sitHappy', 'sleep'];
+
+  // =====================================================================
+  //  Efeitos (balões)
+  // =====================================================================
+  const FX = {
+    heart: ['.kk.kk.', 'kRRkRRk', 'kRRRRRk', 'kRRRRRk', '.kRRRk.', '..kRk..', '...k...'],
+    bang: ['.kkkkk.', 'kWWkWWk', 'kWWkWWk', 'kWWkWWk', 'kWWWWWk', 'kWWkWWk', '.kkkkk.', '..kk...', '..k....'],
+    zzz: ['..........', '.....kkkk.', '.....kWWk.', '......kk..', '.....kWWk.', 'kkk..kkkk.', 'kWk.......', 'kkk.......'],
+    au: ['.kkkkkkkkkkk.', 'kWWWWWWWWWWWk', 'kWWkkWWkWWkWk', 'kWkWWkWkWWkWk', 'kWkkkkWkWWkWk', 'kWkWWkWkWWkWk', 'kWkWWkWWkkWWk', 'kWWWWWWWWWWWk', '.kkkkkkkkkkk.', '..kk.........', '..k..........'],
+    dust1: ['..zz....zz..', '.zzZz..zZzz.', '..zz....zz..'],
+    dust2: ['z..........z', '.z.z....z.z.', '..z......z..'],
+    question: ['.kkkkkk.', 'kWkkkkWk', 'kWWWWkWk', 'kWWWkWWk', 'kWWWWWWk', 'kWWWkWWk', '.kkkkkk.', '..kk....', '..k.....'],
+    note: ['...kkk', '...kWk', '...k.k', '...k..', '.kkk..', 'kWWk..', '.kk...'],
+  };
+  const FXPAL = { k: pack(OUTLINE), R: pack('#e8455e'), W: pack('#fbf8f2'), z: pack('#d8d2c4'), Z: pack('#a8a090') };
+
+  // =====================================================================
+  //  API
+  // =====================================================================
+  function toCanvas(p) {
+    const c = document.createElement('canvas'); c.width = p.w; c.height = p.h;
+    const ctx = c.getContext('2d'); const img = ctx.createImageData(p.w, p.h);
+    new Uint32Array(img.data.buffer).set(p.d); ctx.putImageData(img, 0, 0); return c;
+  }
+  function bounds(p) {
+    let x0 = p.w, x1 = -1;
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (p.d[y * p.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+    let y0 = p.h, y1 = -1;
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (p.d[y * p.w + x]) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    return { x0, x1, y0, y1 };
+  }
+
+  /** Gera todos os quadros de um personagem: { right, left, bounds, poses }. */
+  function buildCharacter(cfg) {
+    const poses = cfg.species === 'person' ? PERSON_POSES : QUAD_POSES;
+    const make = cfg.species === 'person' ? personPose : quadPose;
+    const right = {}, left = {}, bx = {};
+    for (const pose of poses) {
+      const p = make(cfg, pose);
+      right[pose] = toCanvas(p); left[pose] = toCanvas(flipH(p)); bx[pose] = bounds(p);
+    }
+    return { right, left, bounds: bx, poses, size: N, center: N / 2 };
+  }
+  const fx = {};
+  function effect(name) { if (!fx[name]) fx[name] = toCanvas(fromRows(FX[name], FXPAL)); return fx[name]; }
+
+  /** Opções do criador (site) → configuração do motor. Usado pelo site e pelo app de Mac. */
+  function makerToSprite(species, c) {
+    if (species === 'person') return { species, ...c };
+    if (species === 'dog') {
+      return { species, fur: c.fur, coat: c.coat, ears: c.ears, tail: c.tail, chest: c.chest === 'same' ? c.fur : c.chest,
+        patches: c.patches === 'yes', patch: c.patch, collar: c.collar === 'none' ? null : c.collar };
+    }
+    const pat = c.pattern;
+    return { species, fur: c.fur, pattern: pat === 'tabby' ? 'tabby' : 'solid', eyes: c.eyes,
+      chest: pat === 'white' || pat === 'tuxedo' ? '#f4f1ea' : pat === 'tabby' ? '#f6dcb8' : c.fur,
+      socks: pat === 'white' || pat === 'tuxedo', collar: c.collar === 'none' ? null : c.collar };
+  }
+
+  /** Quadros como números (sem canvas): { size, poses, frames: { pose: [rgba...] } }. */
+  function buildRawFromMaker(species, makerCfg) {
+    const cfg = makerToSprite(species, makerCfg);
+    const poses = cfg.species === 'person' ? PERSON_POSES : QUAD_POSES;
+    const make = cfg.species === 'person' ? personPose : quadPose;
+    const frames = {};
+    for (const pose of poses) frames[pose] = Array.from(make(cfg, pose).d);
+    return { size: N, poses, frames };
+  }
+  function effectRaw(name) {
+    const p = fromRows(FX[name], FXPAL);
+    return { w: p.w, h: p.h, data: Array.from(p.d) };
+  }
+  const EFFECTS = Object.keys(FX);
+
+  global.DockSprites = { buildCharacter, effect, SIZE: N, makerToSprite, buildRawFromMaker, effectRaw, EFFECTS };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Dock Companion — character maker, the walking Dock preview and the sheets. */
+(() => {
+  'use strict';
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const chance = (p) => Math.random() < p;
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* no storage: fine */ } },
+  };
+
+  // =====================================================================
+  //  Options
+  // =====================================================================
+  const SKIN = [['#f7dcc6', 'Porcelain'], ['#ebbd98', 'Peach'], ['#cf9a70', 'Tan'], ['#a26b48', 'Bronze'], ['#6e4429', 'Brown'], ['#4a2c1b', 'Espresso']];
+  const HAIR = [['#17110f', 'Black'], ['#3a2a20', 'Dark brown'], ['#6b4226', 'Brown'], ['#a8652f', 'Auburn'], ['#d9a64e', 'Blond'], ['#ece0b8', 'Platinum'], ['#9aa0aa', 'Gray'], ['#d94f8a', 'Pink'], ['#3f7be0', 'Blue'], ['#3aa66b', 'Green']];
+  const CLOTH = [['#7f9fbd', 'Dusty blue'], ['#f25c1e', 'Orange'], ['#ffd23f', 'Yellow'], ['#3aa66b', 'Green'], ['#3b6fe0', 'Blue'], ['#e8455e', 'Red'], ['#f4f1ea', 'White'], ['#2a2e38', 'Charcoal'], ['#9b6bd6', 'Purple'], ['#c98a4b', 'Camel']];
+  const FUR = [['#383142', 'Black'], ['#2a2530', 'Jet'], ['#7a4a2c', 'Chocolate'], ['#c98a4b', 'Caramel'], ['#e0b06a', 'Golden'], ['#e08a3c', 'Ginger'], ['#b9a58c', 'Fawn'], ['#8a8f99', 'Gray'], ['#f4f1ea', 'White']];
+  const ACCENT = [['#d23b3b', 'Red'], ['#3b6fe0', 'Blue'], ['#3aa66b', 'Green'], ['#ffd23f', 'Yellow'], ['#9b6bd6', 'Purple'], ['#f08aa0', 'Pink']];
+  const NONE = ['none', 'None'];
+
+  const SPECIES = {
+    person: {
+      label: 'Person',
+      sections: [
+        { title: 'Look', groups: [
+          { key: 'skin', label: 'Skin', type: 'color', options: SKIN },
+          { key: 'hair', label: 'Hair', type: 'choice', options: [['short', 'Short'], ['spiky', 'Spiky'], ['curly', 'Curly'], ['long', 'Long'], ['bob', 'Bob'], ['bun', 'Bun'], ['buzz', 'Buzz'], ['bald', 'Bald']] },
+          { key: 'hairColor', label: 'Hair color', type: 'color', options: HAIR, showIf: (c) => c.hair !== 'bald' || c.beard !== 'none' },
+          { key: 'beard', label: 'Facial hair', type: 'choice', options: [['none', 'None'], ['stubble', 'Stubble'], ['full', 'Beard'], ['mustache', 'Mustache']] },
+          { key: 'glasses', label: 'Glasses', type: 'choice', options: [['none', 'None'], ['round', 'Round'], ['square', 'Square'], ['sun', 'Shades']] },
+        ] },
+        { title: 'Outfit', groups: [
+          { key: 'hat', label: 'Hat', type: 'choice', options: [['none', 'None'], ['cap', 'Cap'], ['beanie', 'Beanie']] },
+          { key: 'hatColor', label: 'Hat color', type: 'color', options: ACCENT.concat([['#2a2e38', 'Charcoal'], ['#f4f1ea', 'White']]), showIf: (c) => c.hat !== 'none' },
+          { key: 'shirt', label: 'T-shirt', type: 'color', options: CLOTH },
+          { key: 'pantsType', label: 'Bottoms', type: 'choice', options: [['pants', 'Pants'], ['shorts', 'Shorts']] },
+          { key: 'pants', label: 'Bottoms color', type: 'color', options: CLOTH },
+          { key: 'shoes', label: 'Sneakers', type: 'color', options: CLOTH },
+        ] },
+      ],
+    },
+    dog: {
+      label: 'Dog',
+      sections: [
+        { title: 'Coat', groups: [
+          { key: 'fur', label: 'Fur', type: 'color', options: FUR },
+          { key: 'coat', label: 'Length', type: 'choice', options: [['short', 'Short'], ['long', 'Long and feathery']] },
+          { key: 'chest', label: 'Chest', type: 'color', options: [['same', 'Same as fur'], ['#f4f1ea', 'White'], ['#f1e3c8', 'Cream'], ['#68442f', 'Rust'], ['#2a2530', 'Black']] },
+          { key: 'patches', label: 'Spots', type: 'choice', options: [['no', 'None'], ['yes', 'Spotted']] },
+          { key: 'patch', label: 'Spot color', type: 'color', options: [['#2a2530', 'Black'], ['#7a4a2c', 'Chocolate'], ['#c98a4b', 'Caramel'], ['#f4f1ea', 'White'], ['#8a8f99', 'Gray']], showIf: (c) => c.patches === 'yes' },
+        ] },
+        { title: 'Details', groups: [
+          { key: 'ears', label: 'Ears', type: 'choice', options: [['floppy', 'Floppy'], ['up', 'Pointy']] },
+          { key: 'tail', label: 'Tail', type: 'choice', options: [['thin', 'Thin'], ['plume', 'Plume'], ['curl', 'Curly'], ['stub', 'Stubby']] },
+          { key: 'collar', label: 'Collar', type: 'color', options: [NONE].concat(ACCENT) },
+        ] },
+      ],
+    },
+    cat: {
+      label: 'Cat',
+      sections: [
+        { title: 'Coat', groups: [
+          { key: 'fur', label: 'Fur', type: 'color', options: FUR },
+          { key: 'pattern', label: 'Pattern', type: 'choice', options: [['solid', 'Solid'], ['white', 'White belly'], ['tabby', 'Tabby'], ['tuxedo', 'Tuxedo']] },
+        ] },
+        { title: 'Details', groups: [
+          { key: 'eyes', label: 'Eyes', type: 'color', options: [['#8cc63f', 'Green'], ['#e0b23a', 'Amber'], ['#6bb4e8', 'Blue'], ['#d97a2b', 'Copper']] },
+          { key: 'collar', label: 'Collar', type: 'color', options: [NONE].concat(ACCENT) },
+        ] },
+      ],
+    },
+  };
+
+  const PRESETS = [
+    { name: 'Caramelo', species: 'dog', cfg: { fur: '#c98a4b', coat: 'short', ears: 'floppy', tail: 'thin', chest: '#f1e3c8', patches: 'no', patch: '#2a2530', collar: '#d23b3b' } },
+    { name: 'Tadeu', species: 'dog', cfg: { fur: '#383142', coat: 'long', ears: 'floppy', tail: 'plume', chest: '#68442f', patches: 'no', patch: '#2a2530', collar: 'none' } },
+    { name: 'Oreo', species: 'cat', cfg: { fur: '#2a2530', pattern: 'tuxedo', eyes: '#e0b23a', collar: 'none' } },
+    { name: 'Mango', species: 'cat', cfg: { fur: '#e08a3c', pattern: 'tabby', eyes: '#8cc63f', collar: '#3b6fe0' } },
+    { name: 'Enzo', species: 'person', cfg: { skin: '#ebbd98', hair: 'short', hairColor: '#3a2a20', beard: 'stubble', glasses: 'round', hat: 'none', hatColor: '#d23b3b', shirt: '#7f9fbd', pantsType: 'pants', pants: '#2a2e38', shoes: '#f4f1ea' } },
+  ];
+  const presetBy = (n) => PRESETS.find((p) => p.name === n);
+  const firstPreset = (sp) => PRESETS.find((p) => p.species === sp);
+
+  /** Maker settings → sprite engine settings (shared with the Mac app). */
+  const spriteConfig = (species, c) => DockSprites.makerToSprite(species, c);
+
+  // One saved setup per species, so switching back and forth keeps your work.
+  const saved = store.get('dc.state.v2');
+  const state = saved && saved.configs ? saved : {
+    species: 'dog', name: 'Caramelo',
+    configs: { dog: { ...presetBy('Caramelo').cfg }, cat: { ...presetBy('Oreo').cfg }, person: { ...presetBy('Enzo').cfg } },
+  };
+  const save = () => store.set('dc.state.v2', state);
+
+  // =====================================================================
+  //  Actor: the character's brain (same logic as the Mac app)
+  // =====================================================================
+  const FX_FOR = { dog: 'bang', cat: 'note', person: 'bang' };
+
+  class Actor {
+    constructor({ inPlace = false, unit = 2 } = {}) {
+      this.inPlace = inPlace; this.unit = unit;
+      this.x = 100; this.lo = 0; this.hi = 200; this.facing = chance(0.5) ? 1 : -1;
+      this.pose = 'stand'; this.jumpH = 0; this.queue = []; this.cur = null;
+      this.t = 0; this.dist = 0; this.startX = 0; this.strideAcc = 0; this.frame = 0;
+      this.bubble = null; this.bubbleUntil = 0; this.lastWasWalk = false; this.now = 0; this.lastPoke = -9;
+    }
+    setCharacter(ch, species) {
+      this.ch = ch; this.species = species;
+      if (!ch.right[this.pose]) this.pose = 'stand';
+      this.queue = []; this.cur = null; this.jumpH = 0;
+    }
+    has(p) { return !!(this.ch && this.ch.right[p]); }
+    P(name) { // poses equivalentes entre espécies
+      if (this.has(name)) return name;
+      const alt = { wagA: 'happy', wagB: 'happy', lieBlink: 'sitBlink', lie: 'sit', sleep: 'sitBlink', bark: 'surprised', surprised: 'happy', sniff1: 'stand', sniff2: 'blink', bow: 'crouch' };
+      return alt[name] && this.has(alt[name]) ? alt[name] : 'stand';
+    }
+    get range() {
+      const b = this.ch && this.ch.bounds[this.pose];
+      if (!b || this.inPlace) return [this.lo, this.hi];
+      const c = this.ch.center, u = this.unit;
+      const left = this.facing > 0 ? (c - b.x0) * u : (b.x1 + 1 - c) * u;
+      const right = this.facing > 0 ? (b.x1 + 1 - c) * u : (c - b.x0) * u;
+      const lo = this.lo + left, hi = this.hi - right;
+      return lo <= hi ? [lo, hi] : [(lo + hi) / 2, (lo + hi) / 2];
+    }
+    clamp(v) { const [lo, hi] = this.range; return Math.min(Math.max(v, lo), hi); }
+    get speed() { return 15 * this.unit; }
+
+    interrupt(q) { this.queue = q; this.cur = null; this.jumpH = 0; this.lastWasWalk = false; }
+
+    update(dt) {
+      this.now += dt;
+      if (this.bubble && this.now >= this.bubbleUntil) this.bubble = null;
+      let r = Math.min(Math.max(dt, 0), 1);
+      for (let i = 0; i < 64; i++) {
+        if (!this.cur) {
+          if (!this.queue.length) this.plan();
+          this.cur = this.queue.shift(); this.t = 0; this.dist = 0; this.startX = this.x;
+        }
+        const left = this.run(this.cur, r);
+        if (left === null) break;
+        this.cur = null; r = left;
+      }
+      if (!this.inPlace) this.x = this.clamp(this.x);
+    }
+
+    run(s, r) {
+      switch (s.t) {
+        case 'hold': this.pose = this.P(s.pose); this.t += r; return this.t >= s.d ? this.t - s.d : null;
+        case 'cycle': this.t += r; this.pose = this.P(s.poses[Math.floor(Math.min(this.t, s.d) * s.fps) % s.poses.length]); return this.t >= s.d ? this.t - s.d : null;
+        case 'bubble': this.bubble = s.fx; this.bubbleUntil = this.now + s.d; return r;
+        case 'turn': this.facing *= -1; return r;
+        case 'face': this.facing = s.right ? 1 : -1; return r;
+        case 'walk': {
+          const m = Math.min(r, 0.1); this.t += r;
+          let v = s.speed * Math.min(1, 0.25 + this.t / 0.25);
+          const left = s.dist - this.dist, brake = s.speed * (s.gait === 'run' ? 0.35 : 0.18);
+          if (left < brake) v *= Math.max(0.3, left / brake);
+          v *= 1 + 0.12 * Math.sin((this.dist / (this.unit * 6)) * Math.PI);
+          const ds = Math.min(v * m, left);
+          let moved = ds, hitEdge = false;
+          if (!this.inPlace) {
+            const target = this.x + this.facing * ds, cl = this.clamp(target);
+            moved = Math.abs(cl - this.x); hitEdge = Math.abs(cl - target) > 0.01; this.x = cl;
+          }
+          this.dist += moved; this.strideAcc += moved;
+          const fl = this.unit * (s.gait === 'run' ? 5 : s.gait === 'sniff' ? 2.5 : 3.2);
+          while (this.strideAcc >= fl) { this.strideAcc -= fl; this.frame++; }
+          const set = s.gait === 'run' ? ['run1', 'run2', 'run3', 'run4'] : s.gait === 'sniff' ? ['sniff1', 'sniff2'] : ['walk1', 'walk2', 'walk3', 'walk4'];
+          this.pose = this.P(set[this.frame % set.length]);
+          return this.dist >= s.dist - 0.01 || hitEdge ? 0 : null;
+        }
+        case 'jump': {
+          this.t += r; const p = Math.min(1, this.t / s.d);
+          this.jumpH = s.h * 4 * p * (1 - p); this.pose = this.P(s.pose);
+          if (!this.inPlace) this.x = this.clamp(this.x + this.facing * s.vx * Math.min(r, 0.1));
+          if (p >= 1) { this.jumpH = 0; return this.t - s.d; }
+          return null;
+        }
+        default: return r;
+      }
+    }
+
+    // ---------- personalidade ----------
+    walkSteps() {
+      const q = [{ t: 'walk', dist: rnd(40, 200) * this.unit * (this.inPlace ? 0.5 : 1), speed: this.speed * rnd(0.85, 1.15), gait: 'walk' }];
+      if (chance(0.2)) q.push({ t: 'hold', pose: 'stand', d: rnd(0.2, 0.6) });
+      return q;
+    }
+    idleSteps() {
+      const q = [{ t: 'hold', pose: 'stand', d: rnd(0.8, 2) }, { t: 'hold', pose: 'blink', d: 0.13 }, { t: 'hold', pose: 'stand', d: rnd(0.6, 1.5) }];
+      if (chance(0.5)) q.push(...this.happySteps(false));
+      return q;
+    }
+    happySteps(heart) {
+      const q = heart ? [{ t: 'bubble', fx: 'heart', d: 1.4 }] : [];
+      if (this.species === 'person') q.push({ t: 'cycle', poses: ['wave1', 'wave2'], fps: 5, d: rnd(1.2, 1.8) }, { t: 'hold', pose: 'happy', d: 0.4 });
+      else q.push({ t: 'cycle', poses: ['wagA', 'wagB'], fps: 8, d: rnd(1, 1.8) }, { t: 'hold', pose: 'happy', d: 0.3 });
+      return q;
+    }
+    sitSteps() {
+      const q = [{ t: 'hold', pose: 'crouch', d: 0.12 }];
+      const total = rnd(2.5, 5); let acc = 0;
+      while (acc < total) { const d = rnd(1.1, 2.4); q.push({ t: 'hold', pose: 'sit', d }, { t: 'hold', pose: 'sitBlink', d: 0.14 }); acc += d; }
+      if (this.species === 'dog' && chance(0.35)) q.push({ t: 'cycle', poses: ['scratch1', 'scratch2'], fps: 10, d: rnd(0.8, 1.4) });
+      if (this.species === 'cat' && chance(0.45)) q.push({ t: 'cycle', poses: ['groom1', 'groom2'], fps: 4, d: rnd(1.5, 2.5) });
+      if (this.species === 'person' && chance(0.3)) q.push({ t: 'bubble', fx: 'zzz', d: 3 }, { t: 'hold', pose: 'sleep', d: 3 });
+      if (chance(0.4)) q.push({ t: 'hold', pose: 'sitHappy', d: rnd(0.8, 1.5) });
+      return q.concat([{ t: 'hold', pose: 'sit', d: 0.3 }, { t: 'hold', pose: 'crouch', d: 0.12 }]);
+    }
+    lieSteps() {
+      const nap = rnd(3, 6);
+      const q = [{ t: 'hold', pose: 'crouch', d: 0.15 }, { t: 'hold', pose: 'lie', d: rnd(1.2, 2.5) }, { t: 'hold', pose: 'lieBlink', d: 0.15 }, { t: 'hold', pose: 'lie', d: rnd(0.8, 1.6) }];
+      if (chance(0.6)) q.push({ t: 'hold', pose: 'lieBlink', d: 0.4 }, { t: 'bubble', fx: 'zzz', d: nap }, { t: 'hold', pose: 'sleep', d: nap }, { t: 'hold', pose: 'lieBlink', d: 0.4 });
+      q.push({ t: 'hold', pose: 'crouch', d: 0.15 });
+      if (chance(0.4)) q.push({ t: 'hold', pose: 'bow', d: rnd(0.9, 1.4) });
+      return q;
+    }
+    hopSteps() {
+      const u = this.unit;
+      const q = [{ t: 'hold', pose: 'crouch', d: 0.1 }, { t: 'jump', h: rnd(9, 14) * u, d: 0.42, vx: this.inPlace ? 0 : this.speed, pose: 'jump' }, { t: 'hold', pose: 'crouch', d: 0.09 }];
+      if (chance(0.3)) q.push({ t: 'jump', h: 7 * u, d: 0.32, vx: this.inPlace ? 0 : this.speed, pose: 'jump' }, { t: 'hold', pose: 'crouch', d: 0.08 });
+      return q.concat([{ t: 'hold', pose: 'stand', d: 0.1 }]);
+    }
+    sprintSteps() {
+      const sp = this.speed * rnd(2.4, 3.1);
+      const q = [{ t: 'hold', pose: 'crouch', d: 0.08 }, { t: 'walk', dist: rnd(70, 150) * this.unit * (this.inPlace ? 0.5 : 1), speed: sp, gait: 'run' }];
+      if (this.species === 'dog' && chance(0.5)) q.push({ t: 'turn' }, { t: 'walk', dist: rnd(60, 120) * this.unit * (this.inPlace ? 0.5 : 1), speed: sp, gait: 'run' });
+      return q.concat([{ t: 'hold', pose: 'happy', d: 0.4 }, { t: 'hold', pose: 'stand', d: 0.2 }]);
+    }
+    speciesSteps() {
+      if (this.species === 'dog') {
+        return pick([
+          () => [{ t: 'hold', pose: 'stand', d: 0.2 }, { t: 'cycle', poses: ['sniff1', 'sniff2'], fps: 3, d: rnd(1, 2) }, { t: 'walk', dist: rnd(15, 40) * this.unit, speed: this.speed * 0.45, gait: 'sniff' }, { t: 'hold', pose: 'stand', d: 0.3 }],
+          () => { const q = [{ t: 'bubble', fx: 'au', d: 1.1 }]; for (let i = 0; i < 2; i++) q.push({ t: 'hold', pose: 'bark', d: 0.18 }, { t: 'hold', pose: 'stand', d: 0.15 }); return q; },
+          () => this.lieSteps(),
+          () => [{ t: 'hold', pose: 'crouch', d: 0.15 }, { t: 'hold', pose: 'lie', d: 0.3 }, { t: 'cycle', poses: ['belly1', 'belly2'], fps: 6, d: rnd(1.5, 2.4) }, { t: 'hold', pose: 'lie', d: 0.3 }, { t: 'hold', pose: 'crouch', d: 0.15 }],
+          () => [{ t: 'hold', pose: 'bow', d: rnd(0.9, 1.4) }, { t: 'hold', pose: 'stand', d: 0.2 }],
+        ])();
+      }
+      if (this.species === 'cat') {
+        return pick([
+          () => this.lieSteps(),
+          () => [{ t: 'hold', pose: 'bow', d: rnd(1, 1.6) }, { t: 'hold', pose: 'stand', d: 0.2 }],
+          () => [{ t: 'bubble', fx: 'note', d: 0.9 }, { t: 'hold', pose: 'bark', d: 0.4 }, { t: 'hold', pose: 'stand', d: 0.3 }],
+          () => [{ t: 'hold', pose: 'stand', d: 0.2 }, { t: 'cycle', poses: ['sniff1', 'sniff2'], fps: 2, d: rnd(1, 1.8) }, { t: 'hold', pose: 'stand', d: 0.3 }],
+        ])();
+      }
+      return pick([
+        () => [{ t: 'hold', pose: 'stand', d: 0.25 }, { t: 'hold', pose: 'lookBack', d: rnd(0.6, 1.2) }, ...(chance(0.45) ? [{ t: 'turn' }] : []), { t: 'hold', pose: 'stand', d: 0.3 }],
+        () => this.happySteps(false),
+        () => [{ t: 'bubble', fx: 'bang', d: 0.8 }, { t: 'hold', pose: 'surprised', d: 0.6 }, { t: 'hold', pose: 'stand', d: 0.3 }],
+      ])();
+    }
+    plan() {
+      const room = this.facing > 0 ? this.range[1] - this.x : this.x - this.range[0];
+      if (!this.inPlace && room < 3 * this.unit) {
+        this.queue = [{ t: 'hold', pose: 'stand', d: rnd(0.2, 0.5) }, ...(chance(0.3) ? [{ t: 'hold', pose: 'lookBack', d: rnd(0.4, 0.7) }] : []), { t: 'turn' }, { t: 'hold', pose: 'stand', d: 0.12 }, ...this.walkSteps()];
+        this.lastWasWalk = true; return;
+      }
+      if (!this.lastWasWalk) { this.queue = this.walkSteps(); this.lastWasWalk = true; return; }
+      this.lastWasWalk = false;
+      const calm = reduceMotion ? 0 : 1;
+      const table = [
+        [26, () => { this.lastWasWalk = true; return this.walkSteps(); }],
+        [13, () => this.idleSteps()],
+        [9, () => this.sitSteps()],
+        [16, () => this.speciesSteps()],
+        [8 * calm, () => this.hopSteps()],
+        [7 * calm, () => this.sprintSteps()],
+        [5, () => this.happySteps(false)],
+        [this.inPlace ? 0 : 6, () => [{ t: 'hold', pose: 'stand', d: rnd(0.15, 0.4) }, { t: 'turn' }, { t: 'hold', pose: 'stand', d: 0.15 }]],
+      ];
+      const total = table.reduce((a, [w]) => a + w, 0);
+      let r = Math.random() * total;
+      for (const [w, f] of table) { if (r < w) { this.queue = f(); return; } r -= w; }
+      this.queue = this.walkSteps();
+    }
+
+    // ---------- reações ----------
+    poke(towardRight) {
+      if (this.now - this.lastPoke < 0.6) return;
+      this.lastPoke = this.now;
+      const q = [{ t: 'face', right: towardRight }, ...this.happySteps(true)];
+      if (chance(0.3) && !reduceMotion) q.splice(1, 0, { t: 'hold', pose: 'crouch', d: 0.08 }, { t: 'jump', h: 12 * this.unit, d: 0.4, vx: 0, pose: 'jump' });
+      this.interrupt(q);
+    }
+    celebrate(targetX) {
+      const goal = this.clamp(targetX), d = Math.abs(goal - this.x), u = this.unit;
+      const q = [{ t: 'face', right: goal > this.x }, { t: 'bubble', fx: FX_FOR[this.species], d: 0.8 }, { t: 'hold', pose: 'bark', d: 0.25 }];
+      if (d > 2 * u) q.push({ t: 'walk', dist: d, speed: this.speed * (d > 60 * u ? 3.6 : 2.4), gait: 'run' });
+      q.push({ t: 'hold', pose: 'crouch', d: 0.08 });
+      const hops = reduceMotion ? 1 : 3;
+      for (let i = 0; i < hops; i++) q.push({ t: 'jump', h: (13 - 2 * i) * u, d: 0.38, vx: 0, pose: 'jump' }, { t: 'hold', pose: 'crouch', d: 0.08 });
+      q.push(...this.happySteps(false));
+      this.interrupt(q);
+    }
+    perform(action) {
+      const map = {
+        walk: () => [{ t: 'walk', dist: 160 * this.unit, speed: this.speed, gait: 'walk' }],
+        run: () => this.sprintSteps(),
+        hop: () => this.hopSteps(),
+        sit: () => this.sitSteps(),
+        happy: () => this.happySteps(true),
+        lie: () => this.lieSteps(),
+        groom: () => [{ t: 'hold', pose: 'crouch', d: 0.1 }, { t: 'cycle', poses: ['groom1', 'groom2'], fps: 4, d: 2.4 }, { t: 'hold', pose: 'sit', d: 0.4 }],
+        bark: () => [{ t: 'bubble', fx: FX_FOR[this.species], d: 1 }, { t: 'hold', pose: 'bark', d: 0.2 }, { t: 'hold', pose: 'stand', d: 0.15 }, { t: 'hold', pose: 'bark', d: 0.2 }, { t: 'hold', pose: 'stand', d: 0.3 }],
+        roll: () => [{ t: 'hold', pose: 'crouch', d: 0.15 }, { t: 'hold', pose: 'lie', d: 0.3 }, { t: 'cycle', poses: ['belly1', 'belly2'], fps: 6, d: 2 }, { t: 'hold', pose: 'lie', d: 0.3 }, { t: 'hold', pose: 'crouch', d: 0.15 }],
+        nap: () => [{ t: 'hold', pose: 'crouch', d: 0.12 }, { t: 'hold', pose: 'sit', d: 0.5 }, { t: 'bubble', fx: 'zzz', d: 3.5 }, { t: 'hold', pose: 'sleep', d: 3.5 }, { t: 'hold', pose: 'sitBlink', d: 0.4 }],
+      };
+      this.interrupt(map[action]());
+    }
+  }
+
+  const ACTIONS = {
+    person: [['walk', 'Walk'], ['run', 'Run'], ['hop', 'Hop'], ['happy', 'Wave'], ['sit', 'Sit down'], ['nap', 'Take a nap']],
+    dog: [['walk', 'Walk'], ['run', 'Zoomies'], ['hop', 'Hop'], ['happy', 'Wag tail'], ['bark', 'Bark'], ['sit', 'Sit'], ['lie', 'Lie down'], ['roll', 'Roll over']],
+    cat: [['walk', 'Walk'], ['run', 'Run'], ['hop', 'Pounce'], ['sit', 'Sit'], ['groom', 'Groom'], ['lie', 'Nap'], ['bark', 'Meow']],
+  };
+
+  // =====================================================================
+  //  Drawing
+  // =====================================================================
+  function fitCanvas(canvas) {
+    const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false; return { ctx, w, h, dpr };
+  }
+
+  /** Draws the actor with its feet at (x, ground), in device pixels. */
+  function drawActor(ctx, actor, xDev, groundDev, scaleDev) {
+    const ch = actor.ch; if (!ch) return null;
+    const img = (actor.facing > 0 ? ch.right : ch.left)[actor.pose] || ch.right.stand;
+    const size = ch.size * scaleDev;
+    const left = Math.round(xDev - ch.center * scaleDev);
+    const top = Math.round(groundDev - size - actor.jumpH * (scaleDev / actor.unit));
+    ctx.drawImage(img, left, top, size, size);
+    if (actor.bubble) {
+      const fx = DockSprites.effect(actor.bubble), b = ch.bounds[actor.pose] || ch.bounds.stand;
+      const fs = Math.max(1, Math.round(scaleDev * 0.7));
+      const headX = actor.facing > 0 ? b.x1 - 6 : ch.size - 1 - b.x1 + 6;
+      const bx = Math.round(left + headX * scaleDev - (fx.width * fs) / 2);
+      const by = Math.round(top + b.y0 * scaleDev - fx.height * fs - 2 * scaleDev);
+      ctx.drawImage(fx, bx, by, fx.width * fs, fx.height * fs);
+    }
+    return { left, top };
+  }
+
+  // =====================================================================
+  //  Maker
+  // =====================================================================
+  const walker = new Actor({ inPlace: false, unit: 3 });
+
+  function rebuild() {
+    const ch = DockSprites.buildCharacter(spriteConfig(state.species, state.configs[state.species]));
+    walker.setCharacter(ch, state.species);
+    $('#nametag').textContent = state.name;
+    $('#char-code').textContent = encodeCode();
+    updateSend();
+    $('#name-count').textContent = `${state.name.length}/16`;
+    save();
+  }
+
+  /** "Send it to my Dock" opens the Mac app with this character (dockcompanion://install?code=…). */
+  function updateSend() {
+    const a = $('#send');
+    a.href = `dockcompanion://install?code=${encodeCode()}`;
+    a.textContent = `Send ${state.name || 'it'} to my Dock`;
+  }
+
+  function encodeCode() {
+    const json = JSON.stringify({ v: 1, n: state.name, s: state.species, c: state.configs[state.species] });
+    return 'DC1-' + btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  const thumb = (species, cfg) => {
+    const c = document.createElement('canvas'); c.width = 40; c.height = 40; c.className = 'px';
+    c.getContext('2d').drawImage(DockSprites.buildCharacter(spriteConfig(species, cfg)).right.stand, 0, 0);
+    return c;
+  };
+
+  function renderSpecies() {
+    const host = $('#species'); host.innerHTML = '';
+    for (const [key, sp] of Object.entries(SPECIES)) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.setAttribute('aria-pressed', String(state.species === key));
+      b.append(thumb(key, state.configs[key]), document.createTextNode(sp.label));
+      b.addEventListener('click', () => {
+        if (state.species === key) return;
+        state.species = key;
+        if (!state.name || PRESETS.some((p) => p.name === state.name)) state.name = firstPreset(key).name;
+        $('#name').value = state.name;
+        renderAll(); walker.perform('happy');
+      });
+      host.appendChild(b);
+    }
+  }
+
+  function optionName(g, value, cfg) {
+    const o = g.options.find((x) => x[0] === value);
+    if (!o) return '';
+    return value === 'same' ? `Same as fur` : o[1];
+  }
+
+  function renderSections() {
+    const host = $('#sections'); host.innerHTML = '';
+    const cfg = state.configs[state.species];
+    for (const sec of SPECIES[state.species].sections) {
+      const s = document.createElement('section'); s.className = 'sec';
+      const h = document.createElement('h3'); h.textContent = sec.title; s.appendChild(h);
+      for (const g of sec.groups) {
+        if (g.showIf && !g.showIf(cfg)) continue;
+        const opt = document.createElement('div'); opt.className = 'opt';
+        const head = document.createElement('div'); head.className = 'opt-head';
+        const lab = document.createElement('span'); lab.textContent = g.label;
+        const val = document.createElement('span'); val.className = 'val'; val.textContent = optionName(g, cfg[g.key], cfg);
+        head.append(lab, val);
+        const ctl = document.createElement('div'); ctl.className = g.type === 'color' ? 'swatches' : 'chips';
+        ctl.setAttribute('role', 'group'); ctl.setAttribute('aria-label', g.label);
+        for (const [value, name] of g.options) {
+          const b = document.createElement('button'); b.type = 'button';
+          if (g.type === 'color') {
+            b.className = 'sw' + (value === 'none' ? ' none' : '');
+            if (value === 'same') b.style.background = cfg.fur;
+            else if (value !== 'none') b.style.background = value;
+            b.setAttribute('aria-label', `${g.label}: ${name}`); b.title = name;
+          } else { b.textContent = name; }
+          b.setAttribute('aria-pressed', String(cfg[g.key] === value));
+          b.addEventListener('click', () => {
+            cfg[g.key] = value;
+            const y = $('.scroll').scrollTop;
+            renderSections(); renderSpecies(); rebuild();
+            $('.scroll').scrollTop = y;
+            if (chance(0.35)) walker.perform('happy');
+          });
+          ctl.appendChild(b);
+        }
+        opt.append(head, ctl); s.appendChild(opt);
+      }
+      host.appendChild(s);
+    }
+  }
+
+  function renderPresets() {
+    const host = $('#presets'); host.innerHTML = '';
+    for (const p of PRESETS) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'preset';
+      b.append(thumb(p.species, p.cfg), document.createTextNode(p.name));
+      b.addEventListener('click', () => {
+        state.species = p.species; state.configs[p.species] = { ...p.cfg }; state.name = p.name;
+        $('#name').value = p.name; renderAll(); closePops(); walker.perform('happy');
+      });
+      host.appendChild(b);
+    }
+  }
+
+  function renderActions() {
+    const host = $('#actions'); host.innerHTML = '';
+    for (const [a, label] of ACTIONS[state.species]) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+      b.addEventListener('click', () => { walker.perform(a); closePops(); });
+      host.appendChild(b);
+    }
+  }
+
+  function renderAll() { renderSpecies(); renderSections(); renderActions(); rebuild(); }
+
+  function randomize() {
+    const sp = pick(Object.keys(SPECIES));
+    const cfg = {};
+    for (const sec of SPECIES[sp].sections) for (const g of sec.groups) cfg[g.key] = pick(g.options)[0];
+    if (sp === 'person') { if (chance(0.6)) cfg.hat = 'none'; if (chance(0.5)) cfg.beard = 'none'; if (chance(0.5)) cfg.glasses = 'none'; }
+    if (sp === 'dog' && chance(0.6)) cfg.patches = 'no';
+    state.species = sp; state.configs[sp] = cfg;
+    state.name = pick({ person: ['Juju', 'Theo', 'Lia', 'Max', 'Nina', 'Sam'], dog: ['Biscuit', 'Pickles', 'Nugget', 'Waffles', 'Pepper'], cat: ['Mochi', 'Pudding', 'Sushi', 'Toast', 'Miso'] }[sp]);
+    $('#name').value = state.name; renderAll(); walker.perform('happy');
+  }
+
+  // =====================================================================
+  //  Popovers, menu and sheets
+  // =====================================================================
+  function closePops() {
+    for (const p of $$('.pop')) p.hidden = true;
+    for (const b of $$('[data-pop]')) b.setAttribute('aria-expanded', 'false');
+    $('#menu').hidden = true; $('#more').setAttribute('aria-expanded', 'false');
+  }
+  for (const b of $$('[data-pop]')) {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById(b.dataset.pop), open = pop.hidden;
+      closePops(); pop.hidden = !open; b.setAttribute('aria-expanded', String(open));
+    });
+  }
+  $('#more').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = $('#menu').hidden; closePops();
+    $('#menu').hidden = !open; $('#more').setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.pop, .menu')) closePops(); });
+
+  const SHEETS = { install: '#sheet-install', about: '#sheet-about' };
+  function syncSheets() {
+    const want = location.hash.slice(1);
+    for (const [k, sel] of Object.entries(SHEETS)) $(sel).hidden = k !== want;
+    if (SHEETS[want]) $(SHEETS[want] + ' .close').focus({ preventScroll: true });
+  }
+  const closeSheet = () => { if (SHEETS[location.hash.slice(1)]) location.hash = ''; };
+  window.addEventListener('hashchange', syncSheets);
+  for (const b of $$('[data-open]')) b.addEventListener('click', () => { closePops(); location.hash = b.dataset.open; });
+  for (const b of $$('[data-close]')) b.addEventListener('click', closeSheet);
+  for (const v of $$('.veil')) v.addEventListener('click', (e) => { if (e.target === v) closeSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closePops(); closeSheet(); } });
+
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  async function copyText(text, el) {
+    try { await navigator.clipboard.writeText(text); toast('Copied'); }
+    catch {
+      if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      toast('Selected. Press ⌘C to copy');
+    }
+  }
+  for (const b of $$('[data-copy]')) b.addEventListener('click', () => { const el = document.getElementById(b.dataset.copy); copyText(el.textContent, el); });
+  $('#copy-code').addEventListener('click', () => { closePops(); copyText(encodeCode(), $('#char-code')); });
+
+  $('#install').addEventListener('click', () => {
+    location.hash = 'install';
+    toast(`${state.name || 'Your character'} is ready for your Dock`);
+    walker.perform('happy');
+  });
+  $('#randomize').addEventListener('click', randomize);
+  $('#reset').addEventListener('click', () => {
+    const p = firstPreset(state.species);
+    state.configs[state.species] = { ...p.cfg }; state.name = p.name; $('#name').value = p.name; renderAll();
+  });
+  $('#name').addEventListener('input', (e) => {
+    state.name = e.target.value.trim(); $('#nametag').textContent = state.name;
+    $('#name-count').textContent = `${state.name.length}/16`; $('#char-code').textContent = encodeCode(); updateSend(); save();
+  });
+
+  // =====================================================================
+  //  Dock icons
+  // =====================================================================
+  const ICONS = {
+    folder: ['..............', 'kkkkk.........', 'kwwwwkkkkkkkk.', 'kwwwwwwwwwwwk.', 'kssssssssssssk', 'kwwwwwwwwwwwwk', 'kwwwwwwwwwwwwk', 'kwwwwwwwwwwwwk', 'kwwwwwwwwwwwwk', 'kkkkkkkkkkkkkk'],
+    notes: ['.kkkkkkkkkkk..', '.kyyyyyyyyyk..', '.kkkkkkkkkkk..', '.kwwwwwwwwwk..', '.kwssssssswk..', '.kwwwwwwwwwk..', '.kwsssssswwk..', '.kwwwwwwwwwk..', '.kwssssswwwk..', '.kkkkkkkkkkk..'],
+    music: ['......kkkkkk..', '....kkwwwwwk..', '....kwwkkkwk..', '....kwk...kk..', '....kwk...kk..', '..kkkwk.kkkk..', '.kwwwwk.kwwwk.', '.kwwwwkkkwwwk.', '..kkkk..kkkk..'],
+    mail: ['..............', 'kkkkkkkkkkkkkk', 'kwkwwwwwwwwkwk', 'kwwkwwwwwwkwwk', 'kwwwkwwwwkwwwk', 'kwwwwkkkkwwwwk', 'kwwwwwwwwwwwwk', 'kwwwwwwwwwwwwk', 'kkkkkkkkkkkkkk'],
+    camera: ['.....kkkk.....', '.kkkkddddkkkk.', 'kddddddddddddk', 'kddddkkkkddrdk', 'kdddkbbbbkdddk', 'kddkbbwbbbkddk', 'kddkbbbbbbkddk', 'kdddkbbbbkdddk', 'kddddkkkkddddk', '.kkkkkkkkkkkk.'],
+    trash: ['....kkkkk.....', '.kkkkkkkkkkk..', '.kwwwwwwwwwk..', '..kkkkkkkkk...', '..kwskwskwk...', '..kwskwskwk...', '..kwskwskwk...', '..kwskwskwk...', '..kwwwwwwwk...', '...kkkkkkk....'],
+  };
+  const ICONPAL = { k: '#1d1622', w: '#ffffff', y: '#ffd23f', s: '#b8c2cc', d: '#3a3f4a', r: '#e8455e', b: '#7fb4ff' };
+  for (const t of $$('.app-icon')) {
+    const rows = ICONS[t.dataset.icon];
+    const c = document.createElement('canvas'); c.width = 14; c.height = 14; c.className = 'px';
+    const x = c.getContext('2d'), off = Math.floor((14 - rows.length) / 2);
+    rows.forEach((r, y) => [...r].forEach((ch, i) => { if (ICONPAL[ch]) { x.fillStyle = ICONPAL[ch]; x.fillRect(i, y + off, 1, 1); } }));
+    t.appendChild(c);
+    // Click an app: it bounces, and the character runs over to celebrate (just like on a real Mac).
+    t.addEventListener('click', () => {
+      t.classList.remove('bounce'); void t.offsetWidth; t.classList.add('bounce');
+      setTimeout(() => t.classList.remove('bounce'), 1200);
+      const dock = $('#dock').getBoundingClientRect(), r = t.getBoundingClientRect();
+      walker.celebrate(r.left + r.width / 2 - dock.left);
+    });
+  }
+
+  // Wordmark logo: a tiny face on a tiny Dock
+  (() => {
+    const x = $('#logo').getContext('2d');
+    const rows = ['................', '................', '.....kkkk.......', '....kyyyyk......', '...kyykykyk.....', '...kyyyyyyk.....', '....kyrryk......', '.....kkkk.......', '................', '..kkkkkkkkkkkk..', '.kwwwwwwwwwwwwk.', '.kwbbwoowggwwwk.', '.kwbbwoowggwwwk.', '.kwwwwwwwwwwwwk.', '..kkkkkkkkkkkk..', '................'];
+    const pal = { k: '#131314', y: '#ffd23f', r: '#e8455e', w: '#ffffff', b: '#3b6fe0', o: '#f2591d', g: '#3aa66b' };
+    rows.forEach((r, y) => [...r].forEach((ch, i) => { if (pal[ch]) { x.fillStyle = pal[ch]; x.fillRect(i, y, 1, 1); } }));
+  })();
+
+  // =====================================================================
+  //  Loop
+  // =====================================================================
+  const walkerCanvas = $('#walker-canvas'), hit = $('#pet-hit'), tag = $('#nametag'), portrait = $('#portrait'), dockEl = $('#dock');
+  const enzo = new Actor({ inPlace: true, unit: 1 });
+  enzo.setCharacter(DockSprites.buildCharacter(spriteConfig('person', presetBy('Enzo').cfg)), 'person');
+  enzo.speciesSteps = function () { return this.happySteps(false); };
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+
+    const dw = dockEl.clientWidth;
+    const unit = dw > 400 ? 3 : 2;
+    if (unit !== walker.unit) { walker.x = walker.x * (unit / walker.unit); walker.unit = unit; }
+    walker.lo = 4; walker.hi = dw - 4;
+    walker.update(dt);
+
+    const { ctx, w, h, dpr } = fitCanvas(walkerCanvas);
+    ctx.clearRect(0, 0, w, h);
+    const r = drawActor(ctx, walker, Math.round(walker.x * dpr), h, walker.unit * dpr);
+    if (r) {
+      const b = walker.ch.bounds[walker.pose] || walker.ch.bounds.stand, u = walker.unit;
+      const fx0 = walker.facing > 0 ? b.x0 : walker.ch.size - 1 - b.x1;
+      const left = r.left / dpr + fx0 * u, top = r.top / dpr + b.y0 * u;
+      hit.style.left = `${left}px`; hit.style.top = `${top}px`;
+      hit.style.width = `${(b.x1 - b.x0 + 1) * u}px`; hit.style.height = `${(b.y1 - b.y0 + 1) * u}px`;
+      tag.style.left = `${walker.x}px`;
+      tag.style.top = `${Math.max(0, top - 28 - (walker.bubble ? 24 : 0))}px`;
+    }
+
+    if (portrait.offsetParent) {
+      enzo.update(dt);
+      const p = fitCanvas(portrait);
+      p.ctx.clearRect(0, 0, p.w, p.h);
+      drawActor(p.ctx, enzo, Math.round(p.w / 2), Math.round(p.h * 0.93), Math.max(2, Math.floor(p.w / 32)));
+    }
+    requestAnimationFrame(frame);
+  }
+
+  hit.addEventListener('click', (e) => {
+    const r = hit.getBoundingClientRect();
+    walker.poke(e.clientX > r.left + r.width / 2);
+  });
+
+  // Start
+  $('#name').value = state.name;
+  renderPresets();
+  renderAll();
+  syncSheets();
+  walker.x = rnd(80, 300);
+  requestAnimationFrame(frame);
+})();
+
+</script>
