@@ -216,6 +216,11 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .mail span { font-family: var(--mono); color: var(--ink); user-select: all; }
 .mail .pill { padding: 5px 12px; font-size: 12px; background: var(--hair); color: var(--ink); }
 .credit { margin-top: 22px; font-size: 12px; color: var(--muted); }
+.share { margin-top: 22px; padding: 16px; border-radius: 18px; background: var(--hair); display: grid; gap: 8px; justify-items: start; }
+.share h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.share p { margin: 0; color: var(--muted); }
+.share b { color: var(--ink); font-weight: 600; }
+.share .pill { text-decoration: none; margin-top: 4px; }
 
 .toast { position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px); background: var(--panel); color: var(--panel-ink); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; z-index: 60; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -236,6 +241,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   .preset-grid { grid-template-columns: repeat(3, 76px); }
   .made { display: none; }
   .toplinks .link { padding: 6px 8px; }
+  .toplinks .ig-link { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .app-icon, .toast { transition: none; } .app-icon.bounce { animation: none; } }
 </style>
@@ -245,6 +251,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     <a class="wordmark" href="#"><canvas class="px" id="logo" width="16" height="16" aria-hidden="true"></canvas><span>dock<b>companion</b></span></a>
     <nav class="toplinks" aria-label="Pages">
       <a class="link" href="#install">How to install</a>
+      <a class="link ig-link" href="https://instagram.com/dockcompanion" target="_blank" rel="noopener">Instagram</a>
       <a class="link" href="#about">About</a>
     </nav>
 
@@ -369,7 +376,12 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
           <a class="pill" href="https://instagram.com/enzocarrieri" target="_blank" rel="noopener">Instagram</a>
           <a class="pill" href="https://linkedin.com/in/carrierienzo" target="_blank" rel="noopener">LinkedIn</a>
         </div>
-        <div class="mail">Say hi: <span id="email">enzo.carrieri.work@gmail.com</span><button class="pill" type="button" data-copy="email">Copy</button></div>
+        <div class="mail">Say hi: <span id="email">hello@dockcompanion.co</span><button class="pill" type="button" data-copy="email">Copy</button></div>
+        <div class="share">
+          <h4>Show us your companion</h4>
+          <p>Made one you love? Send a screenshot or your character code to <b>hello@dockcompanion.co</b>, or tag <b>@dockcompanion</b>. We post our favorites.</p>
+          <a class="pill ink" href="https://instagram.com/dockcompanion" target="_blank" rel="noopener">Follow @dockcompanion</a>
+        </div>
         <p class="credit">Dock Companion is a personal project, built with Claude Code.</p>
       </div>
     </div>
