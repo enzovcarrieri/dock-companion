@@ -222,6 +222,21 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .share b { color: var(--ink); font-weight: 600; }
 .share .pill { text-decoration: none; margin-top: 4px; }
 
+.sheet-sm { width: min(520px, 100%); }
+.fields { display: grid; gap: 12px; }
+.f { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.f input { font: 500 15px/1.2 var(--font); color: var(--ink); background: var(--hair); border: 1px solid transparent; border-radius: 999px; padding: 11px 16px; }
+.f input:focus { outline: none; border-color: var(--muted); }
+.f input[aria-invalid="true"] { border-color: #e5484d; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--ink); flex: none; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.form-msg { min-height: 18px; margin: 10px 0 0; font-size: 13px; color: #e5484d; }
+.get-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 8px; }
+.get-actions .pill { text-decoration: none; }
+.skip { font-size: 13px; color: var(--muted); }
+.skip:hover { color: var(--ink); }
+.fine { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
 .toast { position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px); background: var(--panel); color: var(--panel-ink); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; z-index: 60; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -292,7 +307,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
         <button class="pill dark" id="install" type="button">Install on Mac</button>
         <button class="pill dark" id="more" type="button" aria-label="More options" aria-expanded="false" aria-controls="menu"><svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="menu" id="menu" hidden>
-          <a href="DockCompanion.zip" download>Download for Mac<small>Free · macOS 14 or later</small></a>
+          <a href="DockCompanion.zip" data-get>Download for Mac<small>Free · macOS 14 or later</small></a>
           <button type="button" data-open="install">Installation guide</button>
           <button type="button" id="copy-code">Copy character code</button>
         </div>
@@ -312,6 +327,36 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   </aside>
 </div>
 
+<!-- Get the app -->
+<div class="veil" id="sheet-get" hidden>
+  <section class="sheet sheet-sm" role="dialog" aria-modal="true" aria-labelledby="get-title">
+    <button class="round close" type="button" data-close aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div id="get-step-form">
+      <h2 id="get-title">Download Dock Companion</h2>
+      <p class="lede">Want to hear about new characters and updates? Leave your name and email. It's optional.</p>
+      <form id="get-form" novalidate>
+        <div class="fields">
+          <label class="f" for="get-name"><span>Name</span><input id="get-name" name="name" autocomplete="name" maxlength="80" placeholder="Your name"></label>
+          <label class="f" for="get-email"><span>Email</span><input id="get-email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com"></label>
+          <input class="hp" type="text" name="_gotcha" id="get-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="check" for="get-consent"><input type="checkbox" id="get-consent"><span>It's ok to email me about Dock Companion. No spam, unsubscribe anytime.</span></label>
+        </div>
+        <p class="form-msg" id="get-msg" role="status" aria-live="polite"></p>
+        <div class="get-actions">
+          <button class="pill ink" type="submit" id="get-submit">Download</button>
+          <a class="skip" id="get-skip" href="#">No thanks, just download</a>
+        </div>
+        <p class="fine">We only use this to tell you about Dock Companion. Your character comes along so we can say hi to it.</p>
+      </form>
+    </div>
+    <div id="get-step-done" hidden>
+      <h2>Your download has started 🎉</h2>
+      <p class="lede">Open <span class="k">DockCompanion.zip</span>, drag the app to Applications and allow it once in Privacy &amp; Security.</p>
+      <div class="get-actions"><a class="pill ink" href="#install">See the install steps</a></div>
+    </div>
+  </section>
+</div>
+
 <!-- Install -->
 <div class="veil" id="sheet-install" hidden>
   <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="install-title">
@@ -320,7 +365,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     <p class="lede">It takes a minute. Your Mac asks for one confirmation the first time, because the app comes straight from this site instead of the App Store.</p>
     <div class="dl">
       <div class="dl-row"><span class="dl-q">Already have the app?</span><a class="pill ink" id="send" href="#">Send it to my Dock</a></div>
-      <div class="dl-row"><span class="dl-q">New here?</span><a class="pill" id="download" href="DockCompanion.zip" download>Download for Mac</a><small id="download-note">Free · macOS 14 or later · Apple Silicon and Intel · under 1 MB</small></div>
+      <div class="dl-row"><span class="dl-q">New here?</span><a class="pill" id="download" href="DockCompanion.zip" data-get>Download for Mac</a><small id="download-note">Free · macOS 14 or later · Apple Silicon and Intel · under 1 MB</small></div>
     </div>
     <div class="cols">
       <div>
@@ -1809,7 +1854,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('.pop, .menu')) closePops(); });
 
-  const SHEETS = { install: '#sheet-install', about: '#sheet-about' };
+  const SHEETS = { install: '#sheet-install', about: '#sheet-about', get: '#sheet-get' };
   function syncSheets() {
     const want = location.hash.slice(1);
     for (const [k, sel] of Object.entries(SHEETS)) $(sel).hidden = k !== want;
@@ -1849,6 +1894,58 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   $('#name').addEventListener('input', (e) => {
     state.name = e.target.value.trim(); $('#nametag').textContent = state.name;
     $('#name-count').textContent = `${state.name.length}/16`; $('#char-code').textContent = encodeCode(); updateSend(); save();
+  });
+
+  // =====================================================================
+  //  Download: optional name + email, then the file
+  // =====================================================================
+  const FORM_URL = 'https://formspree.io/f/xnpjpbna';
+  let zipURL = 'DockCompanion.zip';
+
+  for (const a of $$('[data-get]')) {
+    a.addEventListener('click', (e) => {
+      e.preventDefault(); closePops();
+      zipURL = a.getAttribute('href') || zipURL;
+      $('#get-step-form').hidden = false; $('#get-step-done').hidden = true; $('#get-msg').textContent = '';
+      location.hash = 'get';
+    });
+  }
+
+  function startDownload() {
+    const a = document.createElement('a');
+    a.href = zipURL; a.download = 'DockCompanion.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    $('#get-step-form').hidden = true; $('#get-step-done').hidden = false;
+  }
+
+  $('#get-skip').addEventListener('click', (e) => { e.preventDefault(); startDownload(); });
+
+  $('#get-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('#get-name').value.trim(), email = $('#get-email').value.trim();
+    const consent = $('#get-consent').checked, msg = $('#get-msg');
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    $('#get-name').setAttribute('aria-invalid', String(!name));
+    $('#get-email').setAttribute('aria-invalid', String(!emailOk));
+    if (!name || !emailOk) { msg.textContent = 'Add your name and a valid email, or choose "just download".'; return; }
+    if (!consent) { msg.textContent = 'Tick the box so we can email you, or choose "just download".'; return; }
+    msg.textContent = '';
+    const btn = $('#get-submit'); btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await fetch(FORM_URL, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, email, consent: 'yes',
+          character: `${state.name || 'Unnamed'} (${state.species})`,
+          character_code: encodeCode(),
+          _subject: `New Dock Companion download: ${name}`,
+          _gotcha: $('#get-hp').value,
+        }),
+      });
+    } catch { /* the download still happens */ }
+    btn.disabled = false; btn.textContent = 'Download';
+    startDownload();
   });
 
   // =====================================================================
