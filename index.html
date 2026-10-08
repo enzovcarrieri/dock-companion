@@ -220,7 +220,8 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
 .share h4 { margin: 0; font-size: 14px; font-weight: 600; }
 .share p { margin: 0; color: var(--muted); }
 .share b { color: var(--ink); font-weight: 600; }
-.share .pill { text-decoration: none; margin-top: 4px; }
+.share .pill { text-decoration: none; }
+.share-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
 .sheet-sm { width: min(520px, 100%); }
 .fields { display: grid; gap: 12px; }
@@ -267,6 +268,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     <nav class="toplinks" aria-label="Pages">
       <a class="link" href="#install">How to install</a>
       <a class="link ig-link" href="https://instagram.com/dockcompanion" target="_blank" rel="noopener">Instagram</a>
+      <a class="link ig-link" href="https://x.com/DockCompanion" target="_blank" rel="noopener">X</a>
       <a class="link" href="#about">About</a>
     </nav>
 
@@ -352,6 +354,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     <div id="get-step-done" hidden>
       <h2>Your download has started 🎉</h2>
       <p class="lede">Open <span class="k">DockCompanion.zip</span>, drag the app to Applications and allow it once in Privacy &amp; Security.</p>
+      <p class="fine">Chrome blocked it? Open Chrome's download list, click the file and choose <b>Download suspicious file</b>. It's flagged only because the app is new.</p>
       <div class="get-actions"><a class="pill ink" href="#install">See the install steps</a></div>
     </div>
   </section>
@@ -391,6 +394,8 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
         <h4>Questions</h4>
         <div class="faq">
           <details><summary>Is it safe?</summary><p>Yes. The app only draws your character in a transparent window above the Dock. It doesn't read your files, doesn't go online and doesn't collect anything.</p></details>
+          <details><summary>Chrome says the download is suspicious?</summary><p>Chrome flags files that few people have downloaded yet, especially from new sites. It doesn't mean it found anything. Open Chrome's download list, click the file and choose <b>Download suspicious file</b>. Or download it with Safari, which doesn't show this message.</p></details>
+          <details><summary>Using a work Mac?</summary><p>Some company Macs only run apps approved by their IT team and hide the <b>Open Anyway</b> button. If you can't find it, ask your IT team before installing.</p></details>
           <details><summary>Why does my Mac show a warning?</summary><p>macOS warns about any app distributed outside the App Store without Apple's paid developer signature. You only confirm it once.</p></details>
           <details><summary>Does it drain my battery?</summary><p>Barely. When your character stands still, the app uses 0% CPU. While it walks, it stays around 1–2%.</p></details>
           <details><summary>Will it get in the way of my Dock?</summary><p>No. Clicks go straight through to the Dock. It only reacts when you click the character itself.</p></details>
@@ -424,8 +429,11 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
         <div class="mail">Say hi: <span id="email">hello@dockcompanion.co</span><button class="pill" type="button" data-copy="email">Copy</button></div>
         <div class="share">
           <h4>Show us your companion</h4>
-          <p>Made one you love? Send a screenshot or your character code to <b>hello@dockcompanion.co</b>, or tag <b>@dockcompanion</b>. We post our favorites.</p>
-          <a class="pill ink" href="https://instagram.com/dockcompanion" target="_blank" rel="noopener">Follow @dockcompanion</a>
+          <p>Made one you love? Send a screenshot or your character code to <b>hello@dockcompanion.co</b>, or tag <b>@dockcompanion</b> on Instagram or X. We post our favorites.</p>
+          <div class="share-links">
+            <a class="pill ink" href="https://instagram.com/dockcompanion" target="_blank" rel="noopener">Instagram</a>
+            <a class="pill ink" href="https://x.com/DockCompanion" target="_blank" rel="noopener">X (Twitter)</a>
+          </div>
         </div>
         <p class="credit">Dock Companion is a personal project, built with Claude Code.</p>
       </div>
@@ -1274,7 +1282,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   const FX = {
     heart: ['.kk.kk.', 'kRRkRRk', 'kRRRRRk', 'kRRRRRk', '.kRRRk.', '..kRk..', '...k...'],
     bang: ['.kkkkk.', 'kWWkWWk', 'kWWkWWk', 'kWWkWWk', 'kWWWWWk', 'kWWkWWk', '.kkkkk.', '..kk...', '..k....'],
-    zzz: ['..........', '.....kkkk.', '.....kWWk.', '......kk..', '.....kWWk.', 'kkk..kkkk.', 'kWk.......', 'kkk.......'],
+    zzz: ['.'],  // drawn from ZZZ_FILL below (outlined automatically)
     au: ['.kkkkkkkkkkk.', 'kWWWWWWWWWWWk', 'kWWkkWWkWWkWk', 'kWkWWkWkWWkWk', 'kWkkkkWkWWkWk', 'kWkWWkWkWWkWk', 'kWkWWkWWkkWWk', 'kWWWWWWWWWWWk', '.kkkkkkkkkkk.', '..kk.........', '..k..........'],
     dust1: ['..zz....zz..', '.zzZz..zZzz.', '..zz....zz..'],
     dust2: ['z..........z', '.z.z....z.z.', '..z......z..'],
@@ -1282,6 +1290,22 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     note: ['...kkk', '...kWk', '...k.k', '...k..', '.kkk..', 'kWWk..', '.kk...'],
   };
   const FXPAL = { k: pack(OUTLINE), R: pack('#e8455e'), W: pack('#fbf8f2'), z: pack('#d8d2c4'), Z: pack('#a8a090') };
+  // "Z z" for naps: fill only, outlined at load time so it reads on any background
+  const ZZZ_FILL = [
+    '.............',
+    '......WWWWWW.',
+    '..........W..',
+    '.........W...',
+    '........W....',
+    '.......W.....',
+    '......WWWWWW.',
+    '.............',
+    '.WWWW........',
+    '...W.........',
+    '..W..........',
+    '.WWWW........',
+    '.............',
+  ];
 
   // =====================================================================
   //  API
@@ -1311,7 +1335,8 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     return { right, left, bounds: bx, poses, size: N, center: N / 2 };
   }
   const fx = {};
-  function effect(name) { if (!fx[name]) fx[name] = toCanvas(fromRows(FX[name], FXPAL)); return fx[name]; }
+  const fxPix = (name) => (name === 'zzz' ? outline(fromRows(ZZZ_FILL, FXPAL)) : fromRows(FX[name], FXPAL));
+  function effect(name) { if (!fx[name]) fx[name] = toCanvas(fxPix(name)); return fx[name]; }
 
   /** Opções do criador (site) → configuração do motor. Usado pelo site e pelo app de Mac. */
   function makerToSprite(species, c) {
@@ -1336,7 +1361,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     return { size: N, poses, frames };
   }
   function effectRaw(name) {
-    const p = fromRows(FX[name], FXPAL);
+    const p = fxPix(name);
     return { w: p.w, h: p.h, data: Array.from(p.d) };
   }
   const EFFECTS = Object.keys(FX);
