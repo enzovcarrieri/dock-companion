@@ -353,7 +353,7 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
     </div>
     <div id="get-step-done" hidden>
       <h2>Your download has started 🎉</h2>
-      <p class="lede">Open <span class="k">DockCompanion.zip</span>, drag the app to Applications and allow it once in Privacy &amp; Security.</p>
+      <p class="lede">Open <span class="k">DockCompanion.zip</span>, drag the app to Applications and open it. The first time, your Mac asks if you want to open an app from the internet: click <span class="k">Open</span>.</p>
       <p class="fine">Chrome blocked it? Open Chrome's download list, click the file and choose <b>Download suspicious file</b>. It's flagged only because the app is new.</p>
       <div class="get-actions"><a class="pill ink" href="#install">See the install steps</a></div>
     </div>
@@ -365,10 +365,10 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
   <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="install-title">
     <button class="round close" type="button" data-close aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <h2 id="install-title">Install Dock Companion</h2>
-    <p class="lede">It takes a minute. Your Mac asks for one confirmation the first time, because the app comes straight from this site instead of the App Store.</p>
+    <p class="lede">It takes a minute. The app is signed and notarized by Apple, so your Mac only asks once if you want to open something you downloaded.</p>
     <div class="dl">
       <div class="dl-row"><span class="dl-q">Already have the app?</span><a class="pill ink" id="send" href="#">Send it to my Dock</a></div>
-      <div class="dl-row"><span class="dl-q">New here?</span><a class="pill" id="download" href="DockCompanion.zip" data-get>Download for Mac</a><small id="download-note">Free · macOS 14 or later · Apple Silicon and Intel · under 1 MB</small></div>
+      <div class="dl-row"><span class="dl-q">New here?</span><a class="pill" id="download" href="DockCompanion.zip" data-get>Download for Mac</a><small id="download-note">Free · macOS 14 or later · Apple Silicon and Intel · under 1 MB · notarized by Apple</small></div>
     </div>
     <div class="cols">
       <div>
@@ -376,15 +376,9 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
         <ol class="steps">
           <li><div><b>Download and unzip</b><span>Double-click <span class="k">DockCompanion.zip</span>.</span></div></li>
           <li><div><b>Move it to Applications</b><span>Drag Dock Companion into your Applications folder.</span></div></li>
-          <li><div><b>Open it once</b><span>macOS says it can't verify the developer. That's expected. Click <span class="k">Done</span>.</span></div></li>
-          <li><div><b>Allow it</b><span>Open <span class="k">System Settings</span> → <span class="k">Privacy &amp; Security</span>, scroll down and click <span class="k">Open Anyway</span>.</span></div></li>
+          <li><div><b>Open it</b><span>The first time, macOS asks if you're sure you want to open an app downloaded from the internet. Click <span class="k">Open</span>.</span></div></li>
           <li><div><b>Send your character</b><span>Come back here and click <span class="k">Send it to my Dock</span>. Your character jumps right onto your Dock.</span></div></li>
         </ol>
-        <div class="note">
-          <p><b>No "Open Anyway" button?</b> Files received through messaging apps like WhatsApp get an extra lock from macOS. Open <span class="k">Terminal</span> (Applications → Utilities), paste this and press Return:</p>
-          <div class="code"><code id="cmd">xattr -dr com.apple.quarantine "/Applications/Dock Companion.app"</code><button class="pill" type="button" data-copy="cmd">Copy</button></div>
-          <p>It only removes the "downloaded from the internet" flag from this app. Downloading straight from your browser skips this step.</p>
-        </div>
         <div class="note">
           <p><b>Your character code.</b> Keep it to bring your character back on another Mac.</p>
           <div class="code"><code id="char-code"></code><button class="pill" type="button" data-copy="char-code">Copy</button></div>
@@ -395,8 +389,8 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; }
         <div class="faq">
           <details><summary>Is it safe?</summary><p>Yes. The app only draws your character in a transparent window above the Dock. It doesn't read your files, doesn't go online and doesn't collect anything.</p></details>
           <details><summary>Chrome says the download is suspicious?</summary><p>Chrome flags files that few people have downloaded yet, especially from new sites. It doesn't mean it found anything. Open Chrome's download list, click the file and choose <b>Download suspicious file</b>. Or download it with Safari, which doesn't show this message.</p></details>
-          <details><summary>Using a work Mac?</summary><p>Some company Macs only run apps approved by their IT team and hide the <b>Open Anyway</b> button. If you can't find it, ask your IT team before installing.</p></details>
-          <details><summary>Why does my Mac show a warning?</summary><p>macOS warns about any app distributed outside the App Store without Apple's paid developer signature. You only confirm it once.</p></details>
+          <details><summary>Using a work Mac?</summary><p>Some company Macs only run apps approved by their IT team. If the app doesn't open, ask your IT team before installing.</p></details>
+          <details><summary>Why does my Mac ask before opening it?</summary><p>macOS asks once about every app downloaded from the internet. Dock Companion is signed with an Apple Developer ID and notarized by Apple, which means Apple checked it for malicious software. Click <b>Open</b> and it won't ask again.</p></details>
           <details><summary>Does it drain my battery?</summary><p>Barely. When your character stands still, the app uses 0% CPU. While it walks, it stays around 1–2%.</p></details>
           <details><summary>Will it get in the way of my Dock?</summary><p>No. Clicks go straight through to the Dock. It only reacts when you click the character itself.</p></details>
           <details><summary>Does it work with a side or hidden Dock?</summary><p>Yes. On a side Dock it walks along the wall. With auto-hide on, it walks along the edge of the screen and hops up when the Dock appears.</p></details>
